@@ -1,7 +1,5 @@
 package filesharing;
 
-import java.io.BufferedOutputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -14,14 +12,17 @@ import java.util.Hashtable;
 //import com.sun.org.apache.xalan.internal.xsltc.runtime.Hashtable;
 //if you add this instead of Java.util.Hastable the resultant class will not be generic 
 
+/**
+ * Daemon at the remote server side, listening to incoming file download request and assigns them a separate FileServer thread(object)
+ * @author Muhammad
+ *
+ */
 public class SimpleServerDaemon {
 
-	public final static int SOCKET_PORT = 13264;  // you may change this
-	public static String FILE_TO_SEND = "C:/Users/Muhammad/Desktop/Amazon-DynamoDB.gif";  // you may change this
+	public static int SOCKET_PORT = 13264;  //Port for Server Sock
+	public static String FILE_TO_SEND = "";  // you may change this
 	public final static int FILE_NAME_SIZE = 128;
 	private static int connections = 0;
-	static FileOutputStream fos;
-	static BufferedOutputStream bos;
 	static Object lock = new Object();
 	static Object recordlock = new Object();
 	static Hashtable<String,List<SocketAddress>> peerrecord = new Hashtable<String,List<SocketAddress>>();
@@ -36,12 +37,15 @@ public class SimpleServerDaemon {
 			connections --;
 		}
 	}
-	public static void updatelist(String Strfilename, SocketAddress sock){
-		// TODO Error handling in case the file name is not in the hashtable
+	public static void updatelist(String Strfilename, SocketAddress sockadd){
 		synchronized(recordlock){
-			addrecord = peerrecord.get(Strfilename);
-			addrecord.add(sock);
-			peerrecord.put(Strfilename, addrecord);
+			if (peerrecord.get(Strfilename)!=null){
+				addrecord = peerrecord.get(Strfilename);
+			}
+			else{
+				addrecord.add(sockadd);
+				peerrecord.put(Strfilename, addrecord);
+			}
 		}
 	}
 
@@ -49,16 +53,17 @@ public class SimpleServerDaemon {
 		//Variable initialization
 		ServerSocket servsock = null;
 		Socket sock = null;
+		FILE_TO_SEND = "data/Amazon-DynamoDB.gif";
 		FileSplitter splitter = new FileSplitter(FILE_TO_SEND);
 		byte nparts = (byte)splitter.split();
 		Hashtable<String,Byte> filechunkrecord = new Hashtable<String,Byte>();
 		Hashtable<String,String> filepath = new Hashtable<String,String>();
 		filechunkrecord.put("Amazon-DynamoDB.gif", nparts);
-		splitter = new FileSplitter("C:/Users/Muhammad/Desktop/Amazon-DynamoDB.pptx");
+		splitter = new FileSplitter("data/Amazon-DynamoDB.pptx");
 		nparts = (byte)splitter.split();
 		filechunkrecord.put("Amazon-DynamoDB.pptx", nparts);
-		filepath.put("Amazon-DynamoDB.gif", "C:/Users/Muhammad/Desktop/Amazon-DynamoDB.gif");
-		filepath.put("Amazon-DynamoDB.pptx", "C:/Users/Muhammad/Desktop/Amazon-DynamoDB.pptx");
+		filepath.put("Amazon-DynamoDB.gif", "data/Amazon-DynamoDB.gif");
+		filepath.put("Amazon-DynamoDB.pptx", "data/Amazon-DynamoDB.pptx");
 		try {
 			servsock = new ServerSocket(SOCKET_PORT);
 			addrecord.add(servsock.getLocalSocketAddress());
@@ -66,7 +71,7 @@ public class SimpleServerDaemon {
 			peerrecord.put("Amazon-DynamoDB.pptx", addrecord);
 			addrecord.clear();
 			while (true) {
-				System.out.println(peerrecord.get("Amazon-DynamoDB.gif"));
+				//System.out.println(peerrecord.get("Amazon-DynamoDB.gif"));
 				System.out.println("Waiting.... on Port " + SOCKET_PORT);
 				try {
 					sock = servsock.accept();
@@ -74,21 +79,20 @@ public class SimpleServerDaemon {
 					List <FileServer> fileservers  = new ArrayList <FileServer>();
 					List <Thread> threads  = new ArrayList <Thread>();
 					fileservers.add(new FileServer(SOCKET_PORT+1,sock,filechunkrecord,filepath));
-					threads.add(new Thread(fileservers.get(connections)));
+					//System.out.println(fileservers);
+					System.out.println("Number of connections to the server are: " + connections);
+					connections = threads.size(); // this method can cause some problems because it's not atomic
+					threads.add(new Thread(new FileServer(SOCKET_PORT+1,sock,filechunkrecord,filepath))); 
 					threads.get(connections).start();
-					iconnect();
+					//iconnect();
+					System.out.println("Number of connections to the server are: " + connections);
+					SOCKET_PORT = SOCKET_PORT + 1;
 				}
 				catch (IOException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
+					continue;
 				}
-				fos = new FileOutputStream("Recordfile-"+"Amazon-DynamoDB.gif");
-				bos = new BufferedOutputStream(fos);
-				bos.write("Amazon-DynamoDB.gif".getBytes());
-				bos.flush();
-				bos.write(peerrecord.get("Amazon-DynamoDB.gif").toString().getBytes());
-				bos.flush();
-				
 			}
 		}
 		catch (IOException e1) {
@@ -97,8 +101,6 @@ public class SimpleServerDaemon {
 		}
 		finally {
 			if (servsock != null) servsock.close();
-			bos.close();
-			fos.close();
 		}
 	}
 }

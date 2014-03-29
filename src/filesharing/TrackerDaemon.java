@@ -3,19 +3,41 @@ package filesharing;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
 
 
 //import com.sun.org.apache.xalan.internal.xsltc.runtime.Hashtable;
 //if you add this instead of Java.util.Hastable the resultant class will not be generic 
 
+/**At the moment the purpose of this Tracker Daemon is to listen to peers and add information about them and the 
+ * files that they have.
+ * @author Muhammad Bilal
+*/
 public class TrackerDaemon {
 
-	public final static int SOCKET_PORT = 20000;  // you may change this
+	public final static int SOCKET_PORT = 30000;  // you may change this
 	public final static int FILE_NAME_SIZE = 128;
 	private static int connections = 0;
-
+	static Hashtable<String,List<SocketAddress>> peerrecord = new Hashtable<String,List<SocketAddress>>();
+	static List<SocketAddress> addrecord =	new ArrayList<SocketAddress>();
+	static Object recordlock = new Object();
+	
+	public static void updatelist(String Strfilename, SocketAddress sockadd){
+		synchronized(recordlock){
+			if (peerrecord.get(Strfilename)!=null){
+				addrecord = peerrecord.get(Strfilename);
+			}
+			else{
+				addrecord.add(sockadd);
+				peerrecord.put(Strfilename, addrecord);
+			}
+		}
+		System.out.println(peerrecord);
+	}
+	
 	public static void main (String [] args ) throws IOException {
 		//Variable initialization
 		ServerSocket servsock = null;

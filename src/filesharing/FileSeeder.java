@@ -18,16 +18,25 @@ import java.util.List;
 //import com.sun.org.apache.xalan.internal.xsltc.runtime.Hashtable;
 //if you add this instead of Java.util.Hastable the resultant class will not be generic 
 
+/**
+ * Activate by the MultiFileClient Class if seeding is selected. Each FileSeeder objects serves a particular file to the clients that connect to it.
+ * @author Muhammad Bilal
+ *
+ */
 public class FileSeeder implements Runnable{
 
-	public int SOCKET_PORT = 0;  // you may change this
-	public String FILE_PATH = "";  // you may change this
-	public String FILE_NAME = "";
+	private int SOCKET_PORT = 0;  // you may change this
+	private String FILE_PATH = "";  // you may change this
+	private String FILE_NAME = "";
+	private String TRACKER_IP = "";
+	private int TRACKER_PORT = 0;
 	public final static int FILE_NAME_SIZE = 128;
-	public FileSeeder (String Strfilename, String filepath, int seedport){
+	public FileSeeder (String Strfilename, String filepath, int seedport, String trackerip, int trackerport){
 		this.FILE_NAME = Strfilename;
 		this.SOCKET_PORT = seedport;
 		this.FILE_PATH = filepath;
+		this.TRACKER_IP = trackerip;
+		this.TRACKER_PORT = trackerport;
 	}
 	public static void sendNumOfChunks(byte nparts, OutputStream os){
 		byte[] mybytearray = new byte[1];
@@ -83,7 +92,8 @@ public class FileSeeder implements Runnable{
 		Socket sock = null;
 		byte [] filename = new byte[FILE_NAME_SIZE];
 		byte [] mybytearray = null;
-		List<SocketAddress>myrecord = new ArrayList<SocketAddress>();
+		// This record is supposed to be for locating other peers without tracker but currently it's not functional
+		List<SocketAddress>myrecord = new ArrayList<SocketAddress>(); 
 		
 		FileSplitter splitter = new FileSplitter(FILE_PATH);
 		byte nparts = 0;
@@ -94,6 +104,11 @@ public class FileSeeder implements Runnable{
 			e1.printStackTrace();
 		}
 		try {
+			sock = new Socket(TRACKER_IP, TRACKER_PORT);
+			os = sock.getOutputStream();
+			os.write(FILE_NAME.getBytes());
+			os.flush();
+			sock.close();
 			servsock = new ServerSocket(SOCKET_PORT);
 			while (true) {
 				System.out.println("Waiting...");

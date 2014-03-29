@@ -16,6 +16,12 @@ import java.util.Hashtable;
 //import com.sun.org.apache.xalan.internal.xsltc.runtime.Hashtable;
 //if you add this instead of Java.util.Hastable the resultant class will not be generic 
 
+/**
+ * This is actually a thread class that takes responsibility of a single connection for a client and serves the requested file to that client.
+ * Have to select better name.
+ * @author Muhammad Bilal
+ *
+ */
 public class FileServer implements Runnable{
 	private Socket sock = null;
 	public int DATA_SOCKET_PORT = 0;
@@ -120,8 +126,6 @@ public class FileServer implements Runnable{
 					break;
 				}
 				reqpart = idos.readInt();
-				//nparts--;
-				//System.out.println("Remote IP is" + sock.getRemoteSocketAddress());
 			}			
 			SimpleServerDaemon.updatelist(Strfilename, sock.getRemoteSocketAddress());
 		}
@@ -146,6 +150,6 @@ public class FileServer implements Runnable{
 		}
 		}
 		System.out.println("Exiting after serving file");
-		SimpleServerDaemon.dconnect();
+		//SimpleServerDaemon.dconnect();
 	}
 }

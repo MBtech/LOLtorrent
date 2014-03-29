@@ -11,7 +11,8 @@ import java.io.*;
  * <P>To join a file back together, specify the -join flag and
  * give the base filename:<BR>
  * <I>java FileSplitter -join bigFile.zip</I><BR>
- * @author Keith Trnka
+ * @author Muhammad Bilal
+ * Part of code taken from @author Keith Trnka 's code on file splitter
  */
 public class FileSplitter
 {
@@ -25,38 +26,6 @@ public class FileSplitter
 	public static long chunkSize = 100000;
 	private String filename;
 
-/*	public static void main(String[] args) throws Exception
-	{
-		if (args.length != 2)
-		{
-			System.out.println("Must specify a flag -split or -join and a file argument. The file argument for splitting is the file to split and for joining is the base filename to join on.");
-			System.exit(0);
-		}
-
-		try
-		{
-			if (args[0].equalsIgnoreCase("-split"))
-				split(args[1]);
-			else if (args[0].equalsIgnoreCase("-join"))
-				join(args[1]);
-			else
-			{
-				System.out.println("The first argument must be an option:");
-				System.out.println("\t-split: split the specified file");
-				System.out.println("\t-join: join all splitter outfiles with the specified base filename");
-				System.exit(0);
-			}
-		}
-		catch (FileNotFoundException e)
-		{
-			System.out.println("File not found: " + args[1]);
-		}
-		catch (IOException e)
-		{
-			System.out.println("IO Error");
-		}
-	}
-*/
 	public FileSplitter(String filename){
 		this.filename = filename;
 	}

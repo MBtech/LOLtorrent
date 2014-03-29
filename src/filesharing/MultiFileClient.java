@@ -11,12 +11,19 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 
+/**
+ * FileClient for the peer. Starts the download and if seeding is selected at the end of file download it starts the FileSeeder (object)
+ * Have to change the name
+ * @author Muhammad
+ *
+ */
 public class MultiFileClient implements Runnable {
 
-	public int SOCKET_PORT = 0, DATA_SOCKET_PORT = 0;      // you may change this
-	public String SERVER = "127.0.0.1";  // localhost
-	public boolean seed = false;
-	public String
+	private int SOCKET_PORT = 0, DATA_SOCKET_PORT = 0;      // you may change this
+	private String SERVER = "127.0.0.1";  // localhost
+	private boolean seed = false;
+	private int SEEDING_PORT = 0, TRACKER_PORT = 0;
+	private String
 	FILE_TO_RECEIVED = "";  // you may change this, I give a
 	// different name because i don't want to
 	// overwrite the one used by server...
@@ -24,17 +31,24 @@ public class MultiFileClient implements Runnable {
 	public final static int FILE_SIZE = 6022386; // file size temporary hard coded
 	// should bigger than the file to be downloaded
 
-	public static void main (String [] args ) throws IOException { 
-		MultiFileClient fileclient = new MultiFileClient(13264,"127.0.0.1","C:/Users/Muhammad/Desktop/Amazon-DynamoDB-download.gif", "Amazon-DynamoDB.gif", true);   
-		Thread thread = new Thread(fileclient);  
-		thread.start();  
-	}
-	public MultiFileClient(int SocketPort, String server, String filepath, String file, boolean seed){
+	/**
+	 * Constructor for MultiFileClient
+	 * @param SocketPort Socket port for remote server
+	 * @param server IP Address of the remote server
+	 * @param filepath Path to save the downloaded file
+	 * @param file Name of the downloaded file
+	 * @param seed Whether to seed after downloading or not
+	 * @param seedingport If yes, the port on which seeding server should start
+	 * @param trackerport Port of the tracker to register with
+	 */
+	public MultiFileClient(int SocketPort, String server, String filepath, String file, boolean seed, int seedingport, int trackerport){
 		this.SOCKET_PORT = SocketPort;
 		this.SERVER = server;
 		this.FILE_TO_RECEIVED = filepath;
 		this.filename = file;
 		this.seed = seed;
+		this.SEEDING_PORT = seedingport;
+		this.TRACKER_PORT = trackerport;
 	}
 
 	@Override
@@ -58,8 +72,8 @@ public class MultiFileClient implements Runnable {
 				System.out.println("Receive number of chunks and next data socket");
 				nparts = ids.readByte();
 				DATA_SOCKET_PORT=ids.readInt();
-				System.out.println(nparts);
-				System.out.println(DATA_SOCKET_PORT);
+				//System.out.println(nparts);
+				//System.out.println(DATA_SOCKET_PORT);
 				sock.close();
 				is.close();
 			}
@@ -143,12 +157,9 @@ public class MultiFileClient implements Runnable {
 			e.printStackTrace(); 
 		}
 		if (seed){
-			FileSeeder seeder = new FileSeeder(filename, FILE_TO_RECEIVED, 20000);
+			FileSeeder seeder = new FileSeeder(filename, FILE_TO_RECEIVED, SEEDING_PORT, "127.0.0.1", TRACKER_PORT);
 			Thread seederthread = new Thread(seeder);
 			seederthread.start();
-			MultiFileClient fileclient2 = new MultiFileClient(20000,"127.0.0.1","C:/Users/Muhammad/Desktop/Amazon-DynamoDB-download1.gif", "Amazon-DynamoDB.gif",false);   
-			Thread thread2 = new Thread(fileclient2);  
-			thread2.start();  
 		}
 	}
 }
