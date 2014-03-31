@@ -127,7 +127,6 @@ public class FileServer implements Runnable{
 				}
 				reqpart = idos.readInt();
 			}			
-			SimpleServerDaemon.updatelist(Strfilename, sock.getRemoteSocketAddress());
 		}
 		catch (IOException e) {
 			// TODO Auto-generated catch block

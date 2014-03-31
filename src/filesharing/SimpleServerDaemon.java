@@ -3,7 +3,6 @@ package filesharing;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Hashtable;
@@ -25,8 +24,6 @@ public class SimpleServerDaemon {
 	private static int connections = 0;
 	static Object lock = new Object();
 	static Object recordlock = new Object();
-	static Hashtable<String,List<SocketAddress>> peerrecord = new Hashtable<String,List<SocketAddress>>();
-	static List<SocketAddress> addrecord =	new ArrayList<SocketAddress>();
 	public static void iconnect(){
 		synchronized(lock){
 			connections ++;
@@ -35,17 +32,6 @@ public class SimpleServerDaemon {
 	public static void dconnect(){
 		synchronized(lock){
 			connections --;
-		}
-	}
-	public static void updatelist(String Strfilename, SocketAddress sockadd){
-		synchronized(recordlock){
-			if (peerrecord.get(Strfilename)!=null){
-				addrecord = peerrecord.get(Strfilename);
-			}
-			else{
-				addrecord.add(sockadd);
-				peerrecord.put(Strfilename, addrecord);
-			}
 		}
 	}
 
@@ -66,10 +52,6 @@ public class SimpleServerDaemon {
 		filepath.put("Amazon-DynamoDB.pptx", "data/Amazon-DynamoDB.pptx");
 		try {
 			servsock = new ServerSocket(SOCKET_PORT);
-			addrecord.add(servsock.getLocalSocketAddress());
-			peerrecord.put("Amazon-DynamoDB.gif", addrecord);
-			peerrecord.put("Amazon-DynamoDB.pptx", addrecord);
-			addrecord.clear();
 			while (true) {
 				//System.out.println(peerrecord.get("Amazon-DynamoDB.gif"));
 				System.out.println("Waiting.... on Port " + SOCKET_PORT);
