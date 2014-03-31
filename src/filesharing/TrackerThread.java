@@ -22,20 +22,17 @@ import java.net.SocketTimeoutException;
 //TODO Currently only the ip recording path of the tracker is implemented.
 //TODO Implement the peer address returning path of the thread as well!
 public class TrackerThread implements Runnable{
+
 	private Socket sock = null;
 	public final static int FILE_NAME_SIZE = 128;
 	static FileOutputStream fos;
 	static BufferedOutputStream bos;
 
-	
-
 	public TrackerThread(Socket sock){
 		this.sock = sock;
 	}
 
-
 	public void run () {
-
 		//Variable initialization
 		FileInputStream fis = null;
 		BufferedInputStream bis = null;
