@@ -60,7 +60,8 @@ public class TrackerThread implements Runnable{
 				Filename = new String(mybytearray,0,current);
 				System.out.println(Filename);
 				current = 0;
-				fos = new FileOutputStream("Recordfile-"+ Filename);
+				
+				fos = new FileOutputStream("logs/Recordfile-"+ Filename);
 				bos = new BufferedOutputStream(fos);
 				bos.write(Filename.getBytes());
 				bos.flush();
