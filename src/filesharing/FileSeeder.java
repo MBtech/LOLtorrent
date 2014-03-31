@@ -25,12 +25,12 @@ import java.util.List;
  */
 public class FileSeeder implements Runnable{
 
-	private int SOCKET_PORT = 0;  // you may change this
-	private String FILE_PATH = "";  // you may change this
-	private String FILE_NAME = "";
-	private String TRACKER_IP = "";
+	private int SOCKET_PORT = 0;  // Seeding port
+	private String FILE_PATH = "";  // Relative path of the requested file
+	private String FILE_NAME = ""; //Name of the file to be seed
+	private String TRACKER_IP = ""; // IP and port number of the tracker to register with
 	private int TRACKER_PORT = 0;
-	public final static int FILE_NAME_SIZE = 128;
+	public final static int FILE_NAME_SIZE = 128; //Max size of the file name
 	public FileSeeder (String Strfilename, String filepath, int seedport, String trackerip, int trackerport){
 		this.FILE_NAME = Strfilename;
 		this.SOCKET_PORT = seedport;
