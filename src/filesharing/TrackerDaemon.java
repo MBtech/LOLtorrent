@@ -1,6 +1,7 @@
 package filesharing;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -18,7 +19,7 @@ import java.util.Set;
 /**
  * At the moment the purpose of this Tracker Daemon is to listen to peers and
  * add information about them and the files that they have.
- * @author Muhammad Bilal
+ * @author Muhammad Bilal, João Neto
 */
 public class TrackerDaemon {
 
@@ -36,19 +37,25 @@ public class TrackerDaemon {
 	 * @param sockadd socket address for the peer
 	 */
 	public static void updatelist(String Strfilename, SocketAddress sockadd) {
-		// if this is a new file, we need a new list to store peers
-		if(!peerrecord.contains(Strfilename)) {
+		// if this is a new file, we need a new list to store peers (It is containsKey not just contain())
+		if(!peerrecord.containsKey(Strfilename)) {
 			peerrecord.put(Strfilename, Collections.synchronizedSet(new HashSet<SocketAddress>()));
 		}
 		// add the peer to the list of peers for the filename
 		peerrecord.get(Strfilename).add(sockadd);
-		System.out.println(peerrecord);
+		System.out.println(peerrecord.get(Strfilename).toString());
 	}
 	
 	public static void main (String [] args) throws IOException {
 		//Variable initialization
-		ServerSocket servsock = null;
 		Socket sock = null;
+		ServerSocket servsock = null;
+		//Adding the address of server to the list
+		SocketAddress sockadd = new InetSocketAddress("127.0.0.1", SimpleServerDaemon.getServerAddress());
+		//ServerSocket servsock = new ServerSocket(SimpleServerDaemon.getServerAddress());
+		peerrecord.put("Amazon-DynamoDB.gif", Collections.synchronizedSet(new HashSet<SocketAddress>()));
+		//System.out.println(SimpleServerDaemon.servsock.getLocalSocketAddress());
+		peerrecord.get("Amazon-DynamoDB.gif").add(sockadd);
 		try {
 			servsock = new ServerSocket(SOCKET_PORT);
 			while (true) {

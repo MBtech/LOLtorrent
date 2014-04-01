@@ -103,10 +103,14 @@ public class FileServer implements Runnable{
 			System.out.println("Request for " + Strfilename + " Received on sock" + sock);
 			//filechunkrecord.get
 			nparts = filechunkrecord.get(Strfilename);
-			System.out.println(nparts);
-			sendNumOfChunks(nparts, iods);
+			System.out.println("Total number of chunks for " + Strfilename + " are " + nparts);
+			sendNumOfChunks(nparts, os);
+			//System.out.println(TrackerDaemon.peerrecord.get(Strfilename).toString().getBytes());
+//			iods.flush();
 			//DATA_SOCKET_PORT = SOCKET_PORT+1;
 			iods.writeInt(DATA_SOCKET_PORT);
+			//iods.flush();
+			//System.out.println(TrackerDaemon.peerrecord.get(Strfilename).toString());
 			System.out.println(DATA_SOCKET_PORT);
 			sock.close();
 			os.close();

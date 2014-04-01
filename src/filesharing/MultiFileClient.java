@@ -60,10 +60,11 @@ public class MultiFileClient implements Runnable {
 		Socket sock = null;
 		byte nparts, currentpart=0;
 		byte[] bytefilename = filename.getBytes();
+		byte[] mybytearray = new byte [1024];
 		while(true){
 			try{
+				System.out.println("Connecting to ask for a file... at port " + SOCKET_PORT);
 				sock = new Socket(SERVER, SOCKET_PORT);
-				System.out.println("Connecting to ask for a file...");
 				OutputStream os = sock.getOutputStream();
 				os.write(bytefilename, 0, bytefilename.length);
 				os.flush();
@@ -71,9 +72,14 @@ public class MultiFileClient implements Runnable {
 				DataInputStream ids = new DataInputStream(is);
 				System.out.println("Receive number of chunks and next data socket");
 				nparts = ids.readByte();
+//				bytesRead = ids.read(mybytearray, 0, mybytearray.length);
+//				@SuppressWarnings("deprecation")
+//				String record = new String(mybytearray,bytesRead);
+//				System.out.println(record);
 				DATA_SOCKET_PORT=ids.readInt();
+				//DATA_SOCKET_PORT = SOCKET_PORT + 1;
 				//System.out.println(nparts);
-				//System.out.println(DATA_SOCKET_PORT);
+				System.out.println(DATA_SOCKET_PORT);
 				sock.close();
 				is.close();
 			}
@@ -85,11 +91,10 @@ public class MultiFileClient implements Runnable {
 		}
 		while(true){
 			try {
-				sock = new Socket(SERVER, DATA_SOCKET_PORT);
 				System.out.println("Connecting to get file now... at port " + DATA_SOCKET_PORT);
-
+				sock = new Socket(SERVER, DATA_SOCKET_PORT);
 				// receive file
-				byte [] mybytearray  = new byte [FILE_SIZE];
+				mybytearray  = new byte [FILE_SIZE];
 				InputStream is = sock.getInputStream();
 				DataOutputStream dos = new DataOutputStream(sock.getOutputStream());
 				dos.writeInt(currentpart);

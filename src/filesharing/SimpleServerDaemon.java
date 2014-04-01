@@ -13,11 +13,11 @@ import java.util.Hashtable;
 
 /**
  * Daemon at the remote server side, listening to incoming file download request and assigns them a separate FileServer thread(object)
- * @author Muhammad
+ * @author Muhammad Bilal
  *
  */
 public class SimpleServerDaemon {
-
+	private static ServerSocket servsock = null;
 	public static int SOCKET_PORT = 13264;  //Port for Server Sock
 	public static String FILE_TO_SEND = "";  // you may change this
 	public final static int FILE_NAME_SIZE = 128;
@@ -33,11 +33,16 @@ public class SimpleServerDaemon {
 		synchronized(lock){
 			connections --;
 		}
+	}	
+	
+	public static int getServerAddress(){
+		//System.out.println(servsock.getLocalSocketAddress());
+		//SocketAddress sockadd = servsock.getLocalSocketAddress();
+		return SOCKET_PORT;		
 	}
 
 	public static void main (String [] args ) throws IOException {
 		//Variable initialization
-		ServerSocket servsock = null;
 		Socket sock = null;
 		FILE_TO_SEND = "data/Amazon-DynamoDB.gif";
 		FileSplitter splitter = new FileSplitter(FILE_TO_SEND);

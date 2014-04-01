@@ -58,7 +58,7 @@ public class TrackerThread implements Runnable{
 				System.out.println(Filename);
 				current = 0;
 				
-				fos = new FileOutputStream("logs/Recordfile-"+ Filename);
+				fos = new FileOutputStream("log/Recordfile-"+ Filename);
 				bos = new BufferedOutputStream(fos);
 				bos.write(Filename.getBytes());
 				bos.flush();
