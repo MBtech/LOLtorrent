@@ -1,7 +1,7 @@
 package filesharing;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
+import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -59,13 +59,12 @@ public class TrackerDaemon {
 	public static void main (String [] args) throws IOException {
 		//Variable initialization
 		Socket sock = null;
+		int b = 0;
 		ServerSocket servsock = null;
-		//Adding the address of server to the list
-		SocketAddress sockadd = new InetSocketAddress("127.0.0.1", SimpleServerDaemon.getServerAddress());
-		//ServerSocket servsock = new ServerSocket(SimpleServerDaemon.getServerAddress());
-		peerrecord.put("Amazon-DynamoDB.gif", Collections.synchronizedSet(new HashSet<SocketAddress>()));
-		//System.out.println(SimpleServerDaemon.servsock.getLocalSocketAddress());
-		peerrecord.get("Amazon-DynamoDB.gif").add(sockadd);
+		List <TrackerThread> trackers  = new ArrayList <TrackerThread>();
+		List <Thread> threads  = new ArrayList <Thread>();
+		List <SeedInfoThread> seedinfo  = new ArrayList <SeedInfoThread>();
+		List <Thread> infothreads  = new ArrayList <Thread>();
 		try {
 			servsock = new ServerSocket(SOCKET_PORT);
 			while (true) {
@@ -73,11 +72,20 @@ public class TrackerDaemon {
 				try {
 					sock = servsock.accept();
 					System.out.println("Accepted connection : " + sock);
-					List <TrackerThread> trackers  = new ArrayList <TrackerThread>();
-					List <Thread> threads  = new ArrayList <Thread>();
-					trackers.add(new TrackerThread(sock));
-					threads.add(new Thread(trackers.get(connections)));
-					threads.get(connections).start();
+					InputStream is = sock.getInputStream();
+					b = is.read();
+					if (b == 1){
+						trackers.add(new TrackerThread(sock));
+						connections = threads.size();
+						threads.add(new Thread(trackers.get(connections)));
+						threads.get(connections).start();
+					}
+					else{
+						seedinfo.add(new SeedInfoThread(sock));
+						connections = infothreads.size();
+						infothreads.add(new Thread(seedinfo.get(connections)));
+						infothreads.get(connections).start();
+					}
 				}
 				catch (IOException e1) {
 					// TODO Auto-generated catch block

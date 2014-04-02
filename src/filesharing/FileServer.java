@@ -71,6 +71,27 @@ public class FileServer implements Runnable{
 			e.printStackTrace();
 		}
 	}
+	
+	public static void sendSeedRecord (String seedfile, byte[] mybytearray, OutputStream os, Socket sock){
+		try
+		{
+			File myFile = new File (seedfile);
+			mybytearray  = new byte [(int)myFile.length()];
+			FileInputStream fis = new FileInputStream(myFile);
+			BufferedInputStream bis = new BufferedInputStream(fis);
+			bis.read(mybytearray,0,mybytearray.length);
+			os = sock.getOutputStream();
+			System.out.println("Sending " + FILE_TO_SEND + "(" + mybytearray.length + " bytes)");
+			os.write(mybytearray,0,mybytearray.length);
+			os.flush();
+			bis.close();
+			fis.close();
+		}
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 	public static int getChunkNumber(DataInputStream idos, Socket sock){
 		try{
 			idos = new DataInputStream(sock.getInputStream());
@@ -108,7 +129,7 @@ public class FileServer implements Runnable{
 			iods.writeInt(DATA_SOCKET_PORT);
 			iods.flush();
 			//System.out.println(TrackerDaemon.peerrecord.get(Strfilename).toString()); //Problem in printing this.
-			System.out.println(DATA_SOCKET_PORT);
+			System.out.println("Socket for the data connection is " + DATA_SOCKET_PORT);
 			sock.close();
 			os.close();
 			servsock = new ServerSocket(DATA_SOCKET_PORT);

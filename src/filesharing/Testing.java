@@ -13,17 +13,17 @@ public class Testing {
 		MultiFileClient fileclient = new MultiFileClient(13264,"127.0.0.1","tmp/Amazon-DynamoDB-download.gif", "Amazon-DynamoDB.gif", true, 20000, 30000);   
 		Thread thread = new Thread(fileclient);  
 		thread.start(); 
-		MultiFileClient fileclient2 = new MultiFileClient(13264,"127.0.0.1","tmp/Amazon-DynamoDB-download2.gif", "Amazon-DynamoDB.gif",false, 20001, 30000);   
-		Thread thread2 = new Thread(fileclient2);  
-		thread2.start();
-		MultiFileClient fileclient1 = new MultiFileClient(20000,"127.0.0.1","tmp/Amazon-DynamoDB-download1.gif", "Amazon-DynamoDB.gif",false, 20001, 30000);   
-		Thread thread1 = new Thread(fileclient1);  
-		try {
-			thread1.sleep(2000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		thread1.start(); 
+//		MultiFileClient fileclient2 = new MultiFileClient(13264,"127.0.0.1","tmp/Amazon-DynamoDB-download2.gif", "Amazon-DynamoDB.gif",false, 20001, 30000);   
+//		Thread thread2 = new Thread(fileclient2);  
+//		thread2.start();
+//		MultiFileClient fileclient1 = new MultiFileClient(20000,"127.0.0.1","tmp/Amazon-DynamoDB-download1.gif", "Amazon-DynamoDB.gif",false, 20001, 30000);   
+//		Thread thread1 = new Thread(fileclient1);  
+//		try {
+//			thread1.sleep(10000);
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		thread1.start(); 
 	}
 }

@@ -2,15 +2,12 @@ package filesharing;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 
 
@@ -67,20 +64,7 @@ public class TrackerThread implements Runnable{
 				bos.write(TrackerDaemon.getlist(Filename).getBytes());
 				bos.flush();				
 				sock.close();
-				bos.close();
-				//Code to take input from the log file and change it into SocketAddresses
-//				fis = new FileInputStream("log/Recordfile-" + Filename);
-//				bis = new BufferedInputStream(fis);
-//				File f= new File("log/Recordfile-"+Filename);
-//				mybytearray = new byte[(int) f.length()];
-//				int size = bis.read(mybytearray,0,mybytearray.length);
-//				String S = new String(mybytearray, 0, size);
-//				System.out.println(S);
-//				S = S.replaceAll("[^0-9\\.,:]" , "");
-//				System.out.println(S);
-//				String Sarray[] = S.split(",");
-//				SocketAddress sockadd = new InetSocketAddress(Sarray[0].split(":")[0],Integer.parseInt(Sarray[0].split(":")[1]));
-//				System.out.println(sockadd);				
+				bos.close();				
 			}
 			catch (IOException e) {
 				// TODO Auto-generated catch block

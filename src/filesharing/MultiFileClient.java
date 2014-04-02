@@ -1,15 +1,22 @@
 package filesharing;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * FileClient for the peer. Starts the download and if seeding is selected at the end of file download it starts the FileSeeder (object)
@@ -53,7 +60,7 @@ public class MultiFileClient implements Runnable {
 
 	@Override
 	public void run() {
-		int bytesRead;
+		int bytesRead = 0;
 		int current = 0;
 		FileOutputStream fos = null;
 		BufferedOutputStream bos = null;
@@ -61,6 +68,7 @@ public class MultiFileClient implements Runnable {
 		byte nparts, currentpart=0;
 		byte[] bytefilename = filename.getBytes();
 		byte[] mybytearray = new byte [1024];
+		List <Integer> ChunksAcc = new ArrayList<Integer>();
 		while(true){
 			try{
 				System.out.println("Connecting to ask for a file... at port " + SOCKET_PORT);
@@ -70,7 +78,7 @@ public class MultiFileClient implements Runnable {
 				os.flush();
 				InputStream is = sock.getInputStream();
 				DataInputStream ids = new DataInputStream(is);
-				System.out.println("Receive number of chunks and next data socket");
+				System.out.println("Receiving number of chunks and next data socket");
 				nparts = ids.readByte();
 				DATA_SOCKET_PORT=ids.readInt();
 				System.out.println(DATA_SOCKET_PORT);
@@ -83,6 +91,57 @@ public class MultiFileClient implements Runnable {
 			}
 			break;
 		}
+		//Module to connect to tracker and get seed info
+		try
+		{
+			sock = new Socket(SERVER,TRACKER_PORT);
+			OutputStream os = sock.getOutputStream();
+			InputStream is = sock.getInputStream();
+			os.write(0);
+			os.flush();
+			os.write(filename.getBytes(),0,filename.length());
+			os.flush();
+			//os.close(); // Closing the stream also closes the socket
+			fos = new FileOutputStream("log/DownloadedRecordfile-"+filename);
+			bos = new BufferedOutputStream(fos);
+			System.out.println("reading the input stream to get seed record");
+			do {
+				try{
+					bytesRead =	is.read(mybytearray, current, (mybytearray.length-current));
+				}
+				catch(SocketTimeoutException e){
+					e.printStackTrace();
+					continue;
+				}
+				System.out.println(bytesRead);
+				if(bytesRead >= 0) current += bytesRead;
+			} while(bytesRead > -1);
+			System.out.println("Done reading the input stream. " + current + " Bytes read");
+			bos.write(mybytearray, 0 , current);
+			System.out.println(new String(mybytearray, 0, current));
+			bos.flush();
+			sock.close();
+			//Code to take input from the log file and change it into SocketAddresses
+			FileInputStream fis = new FileInputStream("log/DownloadedRecordfile-" + filename);
+			BufferedInputStream bis = new BufferedInputStream(fis);
+			File f= new File("log/DownloadedRecordfile-"+filename);
+			mybytearray = new byte[(int) f.length()];
+			int size = bis.read(mybytearray,0,mybytearray.length);
+			String S = new String(mybytearray, 0, size);
+			System.out.println(S);
+			S = S.replaceAll("[^0-9\\.,:]" , "");
+			System.out.println(S);
+			String Sarray[] = S.split(",");
+			SocketAddress sockadd  = new InetSocketAddress(Sarray[0].split(":")[0],Integer.parseInt(Sarray[0].split(":")[1]));
+			System.out.println(sockadd);
+			bis.close();
+			
+		}
+		catch(IOException e){
+			e.printStackTrace();
+		}
+
+		//For actual download
 		while(true){
 			try {
 				System.out.println("Connecting to get file now... at port " + DATA_SOCKET_PORT);
@@ -114,6 +173,7 @@ public class MultiFileClient implements Runnable {
 					bos.flush();
 					System.out.println("File " + FILE_TO_RECEIVED
 							+ " downloaded (" + current + " bytes read)");
+					ChunksAcc.add((int) currentpart);
 					currentpart++;
 					current = 0;
 					if(currentpart > nparts){

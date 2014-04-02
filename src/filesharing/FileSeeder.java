@@ -106,6 +106,7 @@ public class FileSeeder implements Runnable{
 		try {
 			sock = new Socket(TRACKER_IP, TRACKER_PORT);
 			os = sock.getOutputStream();
+			os.write(1);
 			os.write(FILE_NAME.getBytes());
 			os.flush();
 			sock.close();
@@ -139,8 +140,6 @@ public class FileSeeder implements Runnable{
 							break;
 						}
 						reqpart = idos.readInt();
-						//nparts--;
-						//System.out.println("Remote IP is" + sock.getRemoteSocketAddress());
 					}
 					myrecord.add(sock.getRemoteSocketAddress());
 					System.out.println(sock.getRemoteSocketAddress());
