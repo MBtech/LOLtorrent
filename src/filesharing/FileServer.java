@@ -104,13 +104,10 @@ public class FileServer implements Runnable{
 			//filechunkrecord.get
 			nparts = filechunkrecord.get(Strfilename);
 			System.out.println("Total number of chunks for " + Strfilename + " are " + nparts);
-			sendNumOfChunks(nparts, os);
-			//System.out.println(TrackerDaemon.peerrecord.get(Strfilename).toString().getBytes());
-//			iods.flush();
-			//DATA_SOCKET_PORT = SOCKET_PORT+1;
+			sendNumOfChunks(nparts, iods); // pass os here instead of iods creates problems. 
 			iods.writeInt(DATA_SOCKET_PORT);
-			//iods.flush();
-			//System.out.println(TrackerDaemon.peerrecord.get(Strfilename).toString());
+			iods.flush();
+			//System.out.println(TrackerDaemon.peerrecord.get(Strfilename).toString()); //Problem in printing this.
 			System.out.println(DATA_SOCKET_PORT);
 			sock.close();
 			os.close();
@@ -127,10 +124,11 @@ public class FileServer implements Runnable{
 				sendChunk (reqpart,mybytearray, filepath.get(Strfilename), os, sock);
 				System.out.println("Done.");
 				if (reqpart == nparts){
+					//System.out.println(TrackerDaemon.peerrecord.get(Strfilename).toString());
 					break;
 				}
 				reqpart = idos.readInt();
-			}			
+			}
 		}
 		catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -139,6 +137,7 @@ public class FileServer implements Runnable{
 		}
 		finally {
 			try{
+				
 				if (bis != null) bis.close();
 				if (os != null) os.close();
 				if (sock!=null) sock.close();

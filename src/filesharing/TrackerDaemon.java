@@ -20,16 +20,16 @@ import java.util.Set;
  * At the moment the purpose of this Tracker Daemon is to listen to peers and
  * add information about them and the files that they have.
  * @author Muhammad Bilal, João Neto
-*/
+ */
 public class TrackerDaemon {
 
 	public final static int SOCKET_PORT = 30000;  // you may change this
 	public final static int FILE_NAME_SIZE = 128;
 	private static int connections = 0;
-	
+
 	// contains a list of peers for each file
 	static Hashtable<String,Set<SocketAddress>> peerrecord = new Hashtable<String,Set<SocketAddress>>();
-	
+
 	/**
 	 * Refreshes the list of peers for a given file
 	 * This method is thread-safe
@@ -45,7 +45,17 @@ public class TrackerDaemon {
 		peerrecord.get(Strfilename).add(sockadd);
 		System.out.println(peerrecord.get(Strfilename).toString());
 	}
-	
+
+	public static String getlist(String Strfilename) {
+		// if this is a new file, we need a new list to store peers (It is containsKey not just contain())
+		if(!peerrecord.containsKey(Strfilename)) {
+			//peerrecord.put(Strfilename, Collections.synchronizedSet(new HashSet<SocketAddress>()));
+			return "";
+		}
+		// add the peer to the list of peers for the filename
+		return peerrecord.get(Strfilename).toString();
+	}
+
 	public static void main (String [] args) throws IOException {
 		//Variable initialization
 		Socket sock = null;

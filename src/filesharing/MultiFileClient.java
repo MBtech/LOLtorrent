@@ -72,13 +72,7 @@ public class MultiFileClient implements Runnable {
 				DataInputStream ids = new DataInputStream(is);
 				System.out.println("Receive number of chunks and next data socket");
 				nparts = ids.readByte();
-//				bytesRead = ids.read(mybytearray, 0, mybytearray.length);
-//				@SuppressWarnings("deprecation")
-//				String record = new String(mybytearray,bytesRead);
-//				System.out.println(record);
 				DATA_SOCKET_PORT=ids.readInt();
-				//DATA_SOCKET_PORT = SOCKET_PORT + 1;
-				//System.out.println(nparts);
 				System.out.println(DATA_SOCKET_PORT);
 				sock.close();
 				is.close();
