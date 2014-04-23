@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -39,12 +40,25 @@ public class TrackerDaemon {
 	public static void updatelist(String Strfilename, SocketAddress sockadd) {
 		// if this is a new file, we need a new list to store peers (It is containsKey not just contain())
 		if(!peerrecord.containsKey(Strfilename)) {
-			peerrecord.put(Strfilename, Collections.synchronizedSet(new HashSet<SocketAddress>()));
+			peerrecord.put(Strfilename, Collections.synchronizedSet(new LinkedHashSet<SocketAddress>()));
 		}
 		// add the peer to the list of peers for the filename
 		peerrecord.get(Strfilename).add(sockadd);
+		System.out.println(peerrecord.get(Strfilename));
+	}
+	
+	//NOT BEING USED ANYWHERE AT THE MOMENT
+	public static void remove_element(String Strfilename, SocketAddress sockadd) {
+		// if this is a new file, we need a new list to store peers (It is containsKey not just contain())
+		if(!peerrecord.containsKey(Strfilename)) 
+			return;
+		else if(!peerrecord.get(Strfilename).contains(sockadd))
+			return;
+		// add the peer to the list of peers for the filename
+		peerrecord.get(Strfilename).remove(sockadd);
 		System.out.println(peerrecord.get(Strfilename).toString());
 	}
+	
 
 	public static String getlist(String Strfilename) {
 		// if this is a new file, we need a new list to store peers (It is containsKey not just contain())

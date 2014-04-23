@@ -58,6 +58,7 @@ public class TrackerThread implements Runnable{
 				System.out.println(Filename);
 				current = 0;
 				TrackerDaemon.updatelist(Filename, sock.getRemoteSocketAddress());
+				//System.out.println(sock.getRemoteSocketAddress());
 				//fos = new FileOutputStream
 				fos = new FileOutputStream("log/Recordfile-"+ Filename, false); //overwrite the previous file
 				bos = new BufferedOutputStream(fos);

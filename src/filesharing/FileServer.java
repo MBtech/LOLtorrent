@@ -1,15 +1,19 @@
 package filesharing;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.util.Hashtable;
 
 
@@ -126,29 +130,33 @@ public class FileServer implements Runnable{
 			nparts = filechunkrecord.get(Strfilename);
 			System.out.println("Total number of chunks for " + Strfilename + " are " + nparts);
 			sendNumOfChunks(nparts, iods); // pass os here instead of iods creates problems. 
-			iods.writeInt(DATA_SOCKET_PORT);
 			iods.flush();
 			//System.out.println(TrackerDaemon.peerrecord.get(Strfilename).toString()); //Problem in printing this.
 			System.out.println("Socket for the data connection is " + DATA_SOCKET_PORT);
 			sock.close();
 			os.close();
 			servsock = new ServerSocket(DATA_SOCKET_PORT);
+			//servsock.getLocalSocketAddress(...) doesn't work!! Why???
+			//Remove the previous instance of server as it doesn't work after serving the previous request
+			TrackerDaemon.remove_element(Strfilename, new InetSocketAddress("127.0.0.1", DATA_SOCKET_PORT-1)); // Stupid solution for works for some cases
+			TrackerDaemon.updatelist(Strfilename, new InetSocketAddress("127.0.0.1", DATA_SOCKET_PORT));
+			System.out.println("Write record to file " + Strfilename );
+			FileOutputStream fos = new FileOutputStream("log/Recordfile-"+ Strfilename, false); //overwrite the previous file
+			BufferedOutputStream bos = new BufferedOutputStream(fos);
+			bos.write(TrackerDaemon.getlist(Strfilename).getBytes());
+			bos.flush();
 			sock = servsock.accept();
 			DataInputStream idos = new DataInputStream(sock.getInputStream());
 			System.out.println("Accepted connection : " + sock);
 			os = sock.getOutputStream();
 			reqpart = getChunkNumber(idos, sock);
-			while(reqpart<=nparts){
-				// send file
-
+			while(reqpart<=nparts && reqpart!=-1){
+				// Read the chunk number that is requested
 				System.out.println("send part "+reqpart);
 				sendChunk (reqpart,mybytearray, filepath.get(Strfilename), os, sock);
 				System.out.println("Done.");
-				if (reqpart == nparts){
-					//System.out.println(TrackerDaemon.peerrecord.get(Strfilename).toString());
-					break;
-				}
 				reqpart = idos.readInt();
+
 			}
 		}
 		catch (IOException e) {
@@ -171,6 +179,7 @@ public class FileServer implements Runnable{
 				e.printStackTrace();
 			}
 		}
+		break;
 		}
 		System.out.println("Exiting after serving file");
 		//SimpleServerDaemon.dconnect();

@@ -37,7 +37,11 @@ public class MultiFileClient implements Runnable {
 	public String filename = "Amazon-DynamoDB.pptx";
 	public final static int FILE_SIZE = 6022386; // file size temporary hard coded
 	// should bigger than the file to be downloaded
-
+	public static byte currentpart=0;
+	private static List <Integer> ChunksAcc = new ArrayList<Integer>();
+	public Object lock = new Object();
+	public static Object lock1 = new Object();
+	public static Object lock2 = new Object();
 	/**
 	 * Constructor for MultiFileClient
 	 * @param SocketPort Socket port for remote server
@@ -58,6 +62,31 @@ public class MultiFileClient implements Runnable {
 		this.TRACKER_PORT = trackerport;
 	}
 
+	//Getting the next block to fetch
+	public byte getpartnumber(){
+		synchronized(lock){
+			currentpart=currentpart++;
+			return currentpart--; 
+		}
+	}
+	
+	public static void remove_element(int n){
+		synchronized(lock1){
+			System.out.println("Element to remove " + n);
+			ChunksAcc.remove((Object)n);
+			System.out.println(ChunksAcc);
+		}
+	}
+	
+	public static int getelement(int n){
+		synchronized(lock1){
+			if (n<=ChunksAcc.size()-1)
+				return ChunksAcc.get(n);
+			else
+				return -1;
+		}
+	}
+
 	@Override
 	public void run() {
 		int bytesRead = 0;
@@ -65,10 +94,11 @@ public class MultiFileClient implements Runnable {
 		FileOutputStream fos = null;
 		BufferedOutputStream bos = null;
 		Socket sock = null;
-		byte nparts, currentpart=0;
+		byte nparts;
 		byte[] bytefilename = filename.getBytes();
 		byte[] mybytearray = new byte [1024];
-		List <Integer> ChunksAcc = new ArrayList<Integer>();
+		List <SocketAddress> sockadd = new ArrayList<SocketAddress>();
+		//Getting number of chunks and the port to get data from the file server
 		while(true){
 			try{
 				System.out.println("Connecting to ask for a file... at port " + SOCKET_PORT);
@@ -80,8 +110,6 @@ public class MultiFileClient implements Runnable {
 				DataInputStream ids = new DataInputStream(is);
 				System.out.println("Receiving number of chunks and next data socket");
 				nparts = ids.readByte();
-				DATA_SOCKET_PORT=ids.readInt();
-				System.out.println(DATA_SOCKET_PORT);
 				sock.close();
 				is.close();
 			}
@@ -91,6 +119,10 @@ public class MultiFileClient implements Runnable {
 			}
 			break;
 		}
+		for (int i =0; i<=nparts; i++){
+			ChunksAcc.add(i);
+		}
+		System.out.println(ChunksAcc);
 		//Module to connect to tracker and get seed info
 		try
 		{
@@ -121,7 +153,8 @@ public class MultiFileClient implements Runnable {
 			System.out.println(new String(mybytearray, 0, current));
 			bos.flush();
 			sock.close();
-			//Code to take input from the log file and change it into SocketAddresses
+			//TODO: There is no need to write this seeder data to the file
+			//Code to take input from the log file and change it into SocketAddresses 
 			FileInputStream fis = new FileInputStream("log/DownloadedRecordfile-" + filename);
 			BufferedInputStream bis = new BufferedInputStream(fis);
 			File f= new File("log/DownloadedRecordfile-"+filename);
@@ -132,81 +165,45 @@ public class MultiFileClient implements Runnable {
 			S = S.replaceAll("[^0-9\\.,:]" , "");
 			System.out.println(S);
 			String Sarray[] = S.split(",");
-			SocketAddress sockadd  = new InetSocketAddress(Sarray[0].split(":")[0],Integer.parseInt(Sarray[0].split(":")[1]));
+			int length = Sarray.length;
+			for(int i = 0; i<length; i++){
+				sockadd.add(new InetSocketAddress(Sarray[i].split(":")[0],Integer.parseInt(Sarray[i].split(":")[1])));
+			}
 			System.out.println(sockadd);
 			bis.close();
-			
+
 		}
 		catch(IOException e){
 			e.printStackTrace();
 		}
-
-		//For actual download
-		while(true){
+		List<Thread> tlist= new ArrayList<Thread>();
+		List<DownloadThread> dtlist = new  ArrayList<DownloadThread>();
+		//Spawn several threads to download the file from multiple clients simultaneously (based on the number of peers returned)
+		int n = 0;
+		if (sockadd.size()>5)
+			n = 5;
+		if (nparts <sockadd.size())
+			n = nparts;
+		else
+			n = sockadd.size();
+		System.out.println("Spawning "+ n + " threads to download the file");
+		for(int i = 0; i<n; i++){
+			SocketAddress seedaddress = sockadd.get(i);
+			DownloadThread dt = new DownloadThread(seedaddress,i, filename, i);
+			Thread t = new Thread(dt);
+			tlist.add(t);
+			dtlist.add(dt);
+			t.start();
+		}
+		for (int i=0; i<n ; i++){
 			try {
-				System.out.println("Connecting to get file now... at port " + DATA_SOCKET_PORT);
-				sock = new Socket(SERVER, DATA_SOCKET_PORT);
-				// receive file
-				mybytearray  = new byte [FILE_SIZE];
-				InputStream is = sock.getInputStream();
-				DataOutputStream dos = new DataOutputStream(sock.getOutputStream());
-				dos.writeInt(currentpart);
-				dos.flush();
-				while(currentpart<=nparts){
-					fos = new FileOutputStream(FILE_TO_RECEIVED+"."+currentpart);
-					bos = new BufferedOutputStream(fos);
-					System.out.println("reading the input stream");
-					sock.setSoTimeout(5000);
-					do {
-						try{
-							bytesRead =	is.read(mybytearray, current, (mybytearray.length-current));
-						}
-						catch(SocketTimeoutException e){
-							break;
-						}
-						System.out.println(bytesRead);
-						if(bytesRead >= 0) current += bytesRead;
-					} while(bytesRead > -1);
-					System.out.println("Done reading the input stream");
-
-					bos.write(mybytearray, 0 , current);
-					bos.flush();
-					System.out.println("File " + FILE_TO_RECEIVED
-							+ " downloaded (" + current + " bytes read)");
-					ChunksAcc.add((int) currentpart);
-					currentpart++;
-					current = 0;
-					if(currentpart > nparts){
-						break;
-					}
-					dos.writeInt(currentpart);
-					dos.flush();
-				}
-			} catch (UnknownHostException e) {
+				tlist.get(i).join();
+			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
-				continue;
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				//e.printStackTrace();
+				System.out.println("Thread Interrupted Exception");
 				continue;
 			}
-			finally {
-				try{
-					if (fos != null)
-						fos.close();
-					if (bos != null)
-						bos.close();
-
-					if (sock != null)
-						sock.close();
-				}
-				catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-			break;
 		}
 		FileSplitter joiner = new FileSplitter(FILE_TO_RECEIVED);
 		try {

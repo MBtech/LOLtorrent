@@ -122,7 +122,6 @@ public class FileSeeder implements Runnable{
 					is.read(filename, 0, FILE_NAME_SIZE);
 					System.out.println(nparts);
 					sendNumOfChunks(nparts, os);
-					iods.writeInt(SOCKET_PORT);
 					System.out.println("Done.");
 					sock.close();
 					os.close();
