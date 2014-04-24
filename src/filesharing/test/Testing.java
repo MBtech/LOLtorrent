@@ -34,11 +34,11 @@ public class Testing {
 
 		// print information every second
 		for(int i=0; i<=2; i++) {
-//			System.out.println("");
-//			System.out.println("@@ << t = " + i + " seconds >> @@");
-//			System.out.println(c1);
-//			System.out.println(c2);
-//			System.out.println("");
+			System.out.println("");
+			System.out.println("@@ << t = " + i + " seconds >> @@");
+			System.out.println(c1);
+			System.out.println(c2);
+			System.out.println("");
 			Thread.sleep(1000);
 		}
 		

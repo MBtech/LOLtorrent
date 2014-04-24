@@ -14,6 +14,7 @@ import filesharing.core.exception.PeerErrorException;
 import filesharing.core.exception.RequestFailedException;
 import filesharing.core.message.peer.request.FileMetadataRequestMessage;
 import filesharing.core.message.peer.response.BlocksPresentResponseMessage;
+import filesharing.core.message.peer.response.FileBlockResponseMessage;
 import filesharing.core.message.peer.response.FileMetadataResponseMessage;
 import filesharing.core.message.peer.response.PeerErrorResponseMessage;
 import filesharing.core.message.peer.response.PeerResponseMessage;
@@ -193,5 +194,10 @@ public class FileDownloader implements Runnable, PeerResponseProcessor, TrackerR
 	public void processBlocksPresentResponseMessage(BlocksPresentResponseMessage msg) {
 		//TODO
 		throw new UnsupportedOperationException("not implemented yet");
+	}
+
+	@Override
+	public void processFileBlockResponseMessage(FileBlockResponseMessage msg) {
+		System.out.println("YAY GOT BLOCK!");
 	}
 }

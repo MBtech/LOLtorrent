@@ -7,8 +7,9 @@ import java.net.Socket;
 
 import filesharing.core.PeerResponseProcessor;
 import filesharing.core.exception.PeerErrorException;
-import filesharing.core.message.peer.request.BlocksPresentRequestMessage;
+import filesharing.core.message.peer.request.FileBlockRequestMessage;
 import filesharing.core.message.peer.response.BlocksPresentResponseMessage;
+import filesharing.core.message.peer.response.FileBlockResponseMessage;
 import filesharing.core.message.peer.response.FileMetadataResponseMessage;
 import filesharing.core.message.peer.response.PeerErrorResponseMessage;
 import filesharing.core.message.peer.response.PeerResponseMessage;
@@ -48,10 +49,16 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 			Socket sock = peer_information.connect();
 			ObjectOutputStream os = new ObjectOutputStream(sock.getOutputStream());
 			ObjectInputStream is = new ObjectInputStream(sock.getInputStream());
+			
 			// do stuff
-			os.writeObject(new BlocksPresentRequestMessage(filename));
-			PeerResponseMessage msg = (PeerResponseMessage)is.readObject();
-			msg.accept(this);
+//			os.writeObject(new BlocksPresentRequestMessage(filename));
+//			PeerResponseMessage msg = (PeerResponseMessage) is.readObject();
+//			msg.accept(this);
+			for(int i=0; i<downloader.getFileTransfer().numBlocks(); i++) {
+				os.writeObject(new FileBlockRequestMessage(filename, i));
+				PeerResponseMessage msg = (PeerResponseMessage) is.readObject();
+				msg.accept(this);
+			}
 			
 			// close connection to peer
 			sock.close();
@@ -76,6 +83,12 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 	public void processBlocksPresentResponseMessage(BlocksPresentResponseMessage msg) {
 		System.out.println("got blocks!");
 		System.out.println(msg);
+	}
+
+	@Override
+	public void processFileBlockResponseMessage(FileBlockResponseMessage msg) throws IOException {
+		System.out.println("writing the block :D");
+		downloader.getFileTransfer().writeBlock(msg.blockIndex(), msg.block());
 	}
 
 }

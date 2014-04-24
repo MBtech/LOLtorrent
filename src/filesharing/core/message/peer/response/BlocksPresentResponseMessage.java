@@ -30,7 +30,7 @@ public class BlocksPresentResponseMessage extends PeerResponseMessage {
 
 	@Override
 	public String toString() {
-		return super.toString() + "Peer response for blocks present for file " + filename + System.lineSeparator() + blocks_present;
+		return super.toString() + "Peer response for blocks present for file " + filename + ": " + blocks_present;
 	}
 
 }

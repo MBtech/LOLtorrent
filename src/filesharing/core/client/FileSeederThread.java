@@ -12,7 +12,9 @@ import filesharing.core.message.peer.request.FileBlockRequestMessage;
 import filesharing.core.message.peer.request.FileMetadataRequestMessage;
 import filesharing.core.message.peer.request.PeerRequestMessage;
 import filesharing.core.message.peer.response.BlocksPresentResponseMessage;
+import filesharing.core.message.peer.response.FileBlockResponseMessage;
 import filesharing.core.message.peer.response.FileMetadataResponseMessage;
+import filesharing.core.message.peer.response.PeerErrorResponseMessage;
 import filesharing.core.message.tracker.response.TrackerErrorResponseMessage;
 
 public class FileSeederThread implements Runnable, PeerRequestProcessor {
@@ -90,8 +92,28 @@ public class FileSeederThread implements Runnable, PeerRequestProcessor {
 	}
 
 	@Override
-	public void processFileBlockRequestMessage(FileBlockRequestMessage msg) {
-		System.out.println(msg);
+	public void processFileBlockRequestMessage(FileBlockRequestMessage msg) throws IOException {
+		String filename = fileTransfer().filename();
+		
+		// check request parameters
+		if(!msg.filename().equals(filename)) {
+			// request for a different filename
+			os.writeObject(new TrackerErrorResponseMessage("im serving file " + filename +", not " + msg.filename()));
+			return;
+		}
+		
+		// process request
+		byte[] block;
+		try {
+			block = file_transfer.readBlock(msg.blockNumber());
+		}
+		catch (IOException e) {
+			os.writeObject(new PeerErrorResponseMessage("error reading file block, sorry"));
+			return;
+		}
+		
+		// send response
+		os.writeObject(new FileBlockResponseMessage(filename, msg.blockNumber(), block));
 	}
 
 	@Override
@@ -102,7 +124,7 @@ public class FileSeederThread implements Runnable, PeerRequestProcessor {
 		// check request parameters
 		if(!msg.filename().equals(filename)) {
 			// request for a different filename
-			os.writeObject(new TrackerErrorResponseMessage("im serving file " + filename +", not " + msg.filename()));
+			os.writeObject(new PeerErrorResponseMessage("im serving file " + filename +", not " + msg.filename()));
 			return;
 		}
 		
