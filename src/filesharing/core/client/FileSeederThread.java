@@ -6,16 +6,16 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.BitSet;
 
-import filesharing.core.PeerRequestProcessor;
-import filesharing.core.message.peer.request.BlocksPresentRequestMessage;
-import filesharing.core.message.peer.request.FileBlockRequestMessage;
-import filesharing.core.message.peer.request.FileMetadataRequestMessage;
-import filesharing.core.message.peer.request.PeerRequestMessage;
-import filesharing.core.message.peer.response.BlocksPresentResponseMessage;
-import filesharing.core.message.peer.response.FileBlockResponseMessage;
-import filesharing.core.message.peer.response.FileMetadataResponseMessage;
-import filesharing.core.message.peer.response.PeerErrorResponseMessage;
-import filesharing.core.message.tracker.response.TrackerErrorResponseMessage;
+import filesharing.core.processor.PeerRequestProcessor;
+import filesharing.message.peer.request.BlocksPresentRequestMessage;
+import filesharing.message.peer.request.FileBlockRequestMessage;
+import filesharing.message.peer.request.FileMetadataRequestMessage;
+import filesharing.message.peer.request.PeerRequestMessage;
+import filesharing.message.peer.response.BlocksPresentResponseMessage;
+import filesharing.message.peer.response.FileBlockResponseMessage;
+import filesharing.message.peer.response.FileMetadataResponseMessage;
+import filesharing.message.peer.response.PeerErrorResponseMessage;
+import filesharing.message.tracker.response.TrackerErrorResponseMessage;
 
 public class FileSeederThread implements Runnable, PeerRequestProcessor {
 		

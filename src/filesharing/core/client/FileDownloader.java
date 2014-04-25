@@ -1,29 +1,23 @@
 package filesharing.core.client;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.Socket;
 import java.util.BitSet;
-import java.util.Iterator;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import filesharing.core.PeerResponseProcessor;
-import filesharing.core.TrackerResponseProcessor;
-import filesharing.core.exception.DownloadCompleteException;
-import filesharing.core.exception.NoNewBlocksForDownloadException;
-import filesharing.core.exception.PeerErrorException;
-import filesharing.core.exception.RequestFailedException;
-import filesharing.core.message.peer.request.FileMetadataRequestMessage;
-import filesharing.core.message.peer.response.BlocksPresentResponseMessage;
-import filesharing.core.message.peer.response.FileBlockResponseMessage;
-import filesharing.core.message.peer.response.FileMetadataResponseMessage;
-import filesharing.core.message.peer.response.PeerErrorResponseMessage;
-import filesharing.core.message.peer.response.PeerResponseMessage;
-import filesharing.core.message.tracker.response.PeerListResponseMessage;
-import filesharing.core.message.tracker.response.SuccessResponseMessage;
-import filesharing.core.message.tracker.response.TrackerErrorResponseMessage;
+import filesharing.core.connection.PeerConnection;
+import filesharing.core.connection.TrackerConnection;
+import filesharing.core.processor.TrackerResponseProcessor;
+import filesharing.exception.DownloadCompleteException;
+import filesharing.exception.NoMetadataException;
+import filesharing.exception.NoNewBlocksForDownloadException;
+import filesharing.message.tracker.request.PeerListRequestMessage;
+import filesharing.message.tracker.request.TrackerRequestMessage;
+import filesharing.message.tracker.response.PeerListResponseMessage;
+import filesharing.message.tracker.response.SuccessResponseMessage;
+import filesharing.message.tracker.response.TrackerErrorResponseMessage;
 
 /**
  * File metadata and content downloader - makes requests to peers and handles
@@ -31,7 +25,7 @@ import filesharing.core.message.tracker.response.TrackerErrorResponseMessage;
  * @author anatoly
  *
  */
-public class FileDownloader implements Runnable, PeerResponseProcessor, TrackerResponseProcessor {
+public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	
 	/**
 	 * Downloader thread
@@ -85,6 +79,19 @@ public class FileDownloader implements Runnable, PeerResponseProcessor, TrackerR
 	}
 	
 	/**
+	 * Returns the list of seeders
+	 * @return set of information of peers
+	 */
+	protected Set<PeerConnection> seedList() {
+		return seed_list;
+	}
+	
+	/**
+	 * List of seeders
+	 */
+	private Set<PeerConnection> seed_list = new HashSet<PeerConnection>();
+	
+	/**
 	 * Returns a block index for a thread to download
 	 * @return block index
 	 */
@@ -131,18 +138,19 @@ public class FileDownloader implements Runnable, PeerResponseProcessor, TrackerR
 	/**
 	 * Updates peer list
 	 */
-	public void updatePeerList() {
+	private void updatePeerList() {
 		String filename = file_transfer.filename();
 		
 		// connect to trackers and ask for peers for this file
-		Iterator<TrackerInformation> tracker_iter = file_transfer.getTrackers().iterator();
-		while(tracker_iter.hasNext()) {
-			TrackerInformation tinfo = tracker_iter.next();
+		for(TrackerConnection tracker : file_transfer.getTrackers()) {
 			try {
-				tinfo.getPeerList(filename, this);
+				// send request
+				TrackerRequestMessage msg = new PeerListRequestMessage(filename);
+				tracker.sendMessage(msg, this);
 			}
-			catch (IOException | RequestFailedException e) {
+			catch (IOException e) {
 				// it failed... that's life, ignore it - neeext!
+				log(e.getMessage());
 			}
 		}
 	}
@@ -154,28 +162,15 @@ public class FileDownloader implements Runnable, PeerResponseProcessor, TrackerR
 		// update the peer list of peers
 		updatePeerList();
 		
-		// connect to peers and ask for metadata
-		Iterator<PeerInformation> seed_iter = file_transfer.seedList().iterator();
-		while(!file_transfer.hasMetadata() && seed_iter.hasNext()) {
-			PeerInformation peer_address = seed_iter.next();
-			// ask peer for metadata
+		// connect to peers and ask for metadata (one at a time)
+		for(PeerConnection peer : seedList()) {
 			try {
-				// connect to the peer
-				Socket sock = peer_address.connect();
-				ObjectOutputStream os = new ObjectOutputStream(sock.getOutputStream());			
-				ObjectInputStream is = new ObjectInputStream(sock.getInputStream());
-				
-				// send message
-				os.writeObject(new FileMetadataRequestMessage(filename));
-				
-				// receive response
-				PeerResponseMessage msg = (PeerResponseMessage) is.readObject();
-				msg.accept(this);
-				
-				sock.close();
+				FileDownloaderThread fdt = new FileDownloaderThread(this, peer);
+				fdt.requestMetadata();
 			}
 			catch(IOException | ClassNotFoundException e) {
-				// it failed... that's life, ignore it - neeext!
+				// communication failed or bad response from peer - ignore it
+				// do nothing and move on to next peer
 			}
 		}
 		
@@ -183,34 +178,37 @@ public class FileDownloader implements Runnable, PeerResponseProcessor, TrackerR
 		if(!file_transfer.hasMetadata()) {
 			// no?! die miserably then
 			log("could not fetch metadata for file " + filename);
-			throw new RequestFailedException("all the peers were mean to me: could not fetch metadata");
+			throw new NoMetadataException("all the peers were mean to me: could not fetch metadata");
 		}
 	}
 	
+	/**
+	 * Logs a message to console
+	 * @param msg message to log
+	 */
 	protected void log(String msg) {
 		file_transfer.log("[DOWN] " + msg);
 	}
 
+	/**
+	 * Starts the downloading of the file
+	 */
 	@Override
 	public void run() {
 		// initialize
 		blocks_for_download = new BitSet(file_transfer.numBlocks());
 		// start a downloader thread for every peer
-		for(PeerInformation peer_info : file_transfer.seedList()) {
+		for(PeerConnection peer_info : seedList()) {
 			executor.execute(new FileDownloaderThread(this, peer_info));
 		}
 	}
-
-	/*****************************
-	 * PROCESS TRACKER RESPONSES *
-	 *****************************/
 	
 	/**
 	 * process success response from tracker
 	 */
 	@Override
 	public void processSuccessResponseMessage(SuccessResponseMessage msg) {
-		/* nothing to do */
+		/* success! nothing to do... */
 	}
 
 	/**
@@ -218,7 +216,7 @@ public class FileDownloader implements Runnable, PeerResponseProcessor, TrackerR
 	 */
 	@Override
 	public void processTrackerErrorResponseMessage(TrackerErrorResponseMessage msg) {
-		/* nothing to do - just ignore errors from tracker */
+		/* hmm... just ignore errors from tracker */
 		/* or should we also throw tracker error exceptions? */
 		log("tracker returned " + msg.reason());
 	}
@@ -229,41 +227,11 @@ public class FileDownloader implements Runnable, PeerResponseProcessor, TrackerR
 	@Override
 	public void processPeerListResponseMessage(PeerListResponseMessage msg) {
 		// check which are new peers (remove existing ones from retrieved list)
-		msg.peerList().removeAll(file_transfer.seedList());
+		msg.peerList().removeAll(seedList());
 		
 		// add all peers to our set
-		file_transfer.seedList().addAll(msg.peerList());
-	}
-	
-	/**************************
-	 * PROCESS PEER RESPONSES *
-	 **************************/
-
-	/**
-	 * Process error responses from peers
-	 */
-	@Override
-	public void processPeerErrorResponseMessage(PeerErrorResponseMessage msg) throws PeerErrorException {
-		throw new PeerErrorException(msg.reason());
-	}
-
-	/**
-	 * Process file metadata response from peer
-	 * @throws IOException 
-	 */
-	@Override
-	public void processFileMetadataResponseMessage(FileMetadataResponseMessage msg) throws IOException {
-		file_transfer.setMetadata(msg.fileSize(), msg.blockSize());
-	}
-
-	@Override
-	public void processBlocksPresentResponseMessage(BlocksPresentResponseMessage msg) {
-		//TODO
-		throw new UnsupportedOperationException("not implemented yet");
-	}
-
-	@Override
-	public void processFileBlockResponseMessage(FileBlockResponseMessage msg) {
-		System.out.println("YAY GOT BLOCK!");
+		seedList().addAll(msg.peerList());
+		
+		//TODO: notify downloader of newly retrieved peers
 	}
 }

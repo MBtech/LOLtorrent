@@ -2,7 +2,7 @@ package filesharing.test;
 
 import java.io.IOException;
 
-import filesharing.core.client.Client;
+import filesharing.core.client.FileClient;
 import filesharing.core.client.FileTransfer;
 import filesharing.core.tracker.TrackerDaemon;
 
@@ -21,19 +21,22 @@ public class Testing {
 		t.start();
 		
 		// client 0 seeds file
-		Client c0 = new Client("0");
+		FileClient c0 = new FileClient("0");
 		c0.setWorkingDirectory("/tmp/c1"); // XXX
 		c0.addTracker("localhost", TrackerDaemon.DEFAULT_TRACKER_PORT);
 		c0.seedFile("/tmp/c1/irs.txt", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
 		
 		// client 1 seeds file
-		Client c1 = new Client("1");
+		FileClient c1 = new FileClient("1");
 		c1.setWorkingDirectory("/tmp/c1"); // XXX
 		c1.addTracker("localhost", TrackerDaemon.DEFAULT_TRACKER_PORT);
 		c1.seedFile("/tmp/c1/irs.txt", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
 		
+		// must wait a bit - seedFile method calls are asynchronous
+		Thread.sleep(500);
+		
 		// client 2 downloads the file from client 1
-		Client c2 = new Client("2");
+		FileClient c2 = new FileClient("2");
 		c2.setWorkingDirectory("/tmp/c2"); // XXX
 		c2.addTracker("localhost", TrackerDaemon.DEFAULT_TRACKER_PORT);
 		c2.downloadFile("irs.txt"); // XXX

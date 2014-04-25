@@ -6,22 +6,23 @@ import java.io.RandomAccessFile;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
-import filesharing.core.exception.RequestFailedException;
+import filesharing.core.connection.TrackerConnection;
+import filesharing.exception.BlockNotPresentException;
+import filesharing.exception.NoMetadataException;
 
 public class FileTransfer {
 	
 	/**
 	 * Default block size in bytes
 	 */
-	public static final int DEFAULT_BLOCK_SIZE = 3;//(int) (1024*1024*1.4);
+	public static final int DEFAULT_BLOCK_SIZE = 1;//(int) (1024*1024*1.4);
 	
 	/**
 	 * The client with this file transfer
 	 */
-	private Client client;
+	private FileClient client;
 	
 	/**
 	 * The filename for this file
@@ -36,17 +37,17 @@ public class FileTransfer {
 	/**
 	 * An object for random access to the local file
 	 */
-	private RandomAccessFile file_access;
+	private transient RandomAccessFile file_access;
 	
 	/**
 	 * A seeder thread
 	 */
-	private FileSeeder seeder = new FileSeeder(this);
+	private transient FileSeeder seeder = new FileSeeder(this);
 	
 	/**
 	 * A download thread
 	 */
-	private FileDownloader downloader = new FileDownloader(this);
+	private transient FileDownloader downloader = new FileDownloader(this);
 	
 	/**
 	 * Checks if metadata for the file is loaded
@@ -56,12 +57,7 @@ public class FileTransfer {
 	/**
 	 * List of trackers to connect
 	 */
-	private Set<TrackerInformation> tracker_list = new HashSet<TrackerInformation>();
-	
-	/**
-	 * List of seeders
-	 */
-	private Set<PeerInformation> seed_list = new HashSet<PeerInformation>();
+	private Set<TrackerConnection> tracker_list = new HashSet<TrackerConnection>();
 	
 	/**
 	 * File metadata: file size (in bytes)
@@ -84,7 +80,7 @@ public class FileTransfer {
 	 * @param local_file pointer to local file
 	 * @throws IOException 
 	 */
-	public FileTransfer(Client client, String filename, File local_file) throws IOException {
+	public FileTransfer(FileClient client, String filename, File local_file) throws IOException {
 		this.client = client;
 		this.filename = filename;
 		this.local_file = local_file;
@@ -96,7 +92,7 @@ public class FileTransfer {
 	 * Add a list of trackers for this file
 	 * @param new_trackers a collection of tracker information objects
 	 */
-	public synchronized void addTrackers(Collection<TrackerInformation> new_trackers) {
+	public synchronized void addTrackers(Collection<TrackerConnection> new_trackers) {
 		tracker_list.addAll(new_trackers);
 	}
 	
@@ -106,11 +102,11 @@ public class FileTransfer {
 	 * @param port tracker port
 	 */
 	public synchronized void addTracker(String address, int port) {
-		tracker_list.add(new TrackerInformation(address, port));
+		tracker_list.add(new TrackerConnection(address, port));
 	}
 	
 	/**
-	 * Sets file metadata
+	 * Sets metadata for the file transfer
 	 * @param file_size the size of the file
 	 * @param block_size the size of the transfer blocks
 	 * @throws IOException
@@ -119,6 +115,9 @@ public class FileTransfer {
 		// dont set metadata if already present
 		if(hasMetadata()) return;
 		
+		// we now have metadata
+		has_metadata = true;
+		
 		// initialize metadata
 		this.file_size = file_size;
 		this.block_size = block_size;
@@ -126,9 +125,6 @@ public class FileTransfer {
 		
 		// open file for random access
 		file_access = new RandomAccessFile(local_file, "rws");
-		
-		// finish
-		has_metadata = true;
 	}
 	
 	/**
@@ -167,25 +163,13 @@ public class FileTransfer {
 	 * Starts the seeding of the file
 	 */
 	public synchronized void startSeeder() throws IOException {
-		
-		// FIXME: should throw a DontHaveMetadata exception
-		if(!hasMetadata()) return;
+		// check if metadata is present
+		if(!hasMetadata()) {
+			throw new NoMetadataException("file " + filename() + " has no metadata");
+		}
 		
 		// start seeder thread
 		seeder.start();
-		
-		//TODO: should be moved to the seeder
-		// register thread on trackers
-		int data_port = seeder.getDataPort();
-		Iterator<TrackerInformation> it = tracker_list.iterator();
-		while(it.hasNext()) {
-			TrackerInformation tinfo = it.next();
-			try {
-				tinfo.registerPeer(filename(), data_port);
-			} catch (RequestFailedException e) {
-				log("failed to register with tracker " + tinfo);
-			}
-		}
 		
 	}
 	
@@ -194,8 +178,10 @@ public class FileTransfer {
 	 * @throws IOException 
 	 */
 	public synchronized void startDownload() throws IOException {
-		// FIXME: should throw a DontHaveMetadata exception
-		if(!hasMetadata()) return;
+		// check if metadata is present
+		if(!hasMetadata()) {
+			throw new NoMetadataException("file " + filename() + " has no metadata");
+		}
 		
 		// start downloader thread
 		downloader.start();
@@ -222,7 +208,10 @@ public class FileTransfer {
 	 * @return file size
 	 */
 	public long fileSize() {
-		//TODO: should throw an exception if no metadata
+		// check if metadata is present
+		if(!hasMetadata()) {
+			throw new NoMetadataException("file " + filename() + " has no metadata");
+		}
 		return file_size;
 	}
 	
@@ -231,7 +220,10 @@ public class FileTransfer {
 	 * @return transfer block size
 	 */
 	public int blockSize() {
-		//TODO: should throw an exception if no metadata
+		// check if metadata is present
+		if(!hasMetadata()) {
+			throw new NoMetadataException("file " + filename() + " has no metadata");
+		}
 		return block_size;
 	}
 
@@ -240,25 +232,23 @@ public class FileTransfer {
 	 * @return number of blocks
 	 */
 	public int numBlocks() {
-		//TODO: should throw an exception if no metadata
+		// check if metadata is present
+		if(!hasMetadata()) {
+			throw new NoMetadataException("file " + filename() + " has no metadata");
+		}
+		// compute number of blocks from file size and block size
+		// how many "full" blocks are there?
 		int full_sized_blocks = (int) (fileSize() / blockSize());
+		// check if there is a smaller block in the end
 		int last_block_smaller = ((fileSize()%blockSize() != 0) ? 1 : 0);
 		return full_sized_blocks + last_block_smaller;
-	}
-	
-	/**
-	 * Returns the list of seeders
-	 * @return set of information of peers
-	 */
-	protected Set<PeerInformation> seedList() {
-		return seed_list;
 	}
 	
 	/**
 	 * Returns the list of trackers
 	 * @return set of tracker information objects
 	 */
-	protected Set<TrackerInformation> getTrackers() {
+	protected Set<TrackerConnection> getTrackers() {
 		return tracker_list;
 	}
 	
@@ -277,7 +267,10 @@ public class FileTransfer {
 	 * @throws IOException on read operation failure
 	 */
 	protected synchronized byte[] readBlock(int index) throws IOException {
-		//TODO: check if block is present
+		// check if we have the block
+		if(!getBlocksPresent().get(index)) {
+			throw new BlockNotPresentException("dont have block " + index);
+		}
 		
 		// initialize
 		int block_size = (int) ((index==numBlocks()-1) ? (fileSize()%blockSize()) : blockSize());
@@ -296,7 +289,12 @@ public class FileTransfer {
 	 * @throws IOException on write operation failure
 	 */
 	protected synchronized void writeBlock(int index, byte[] block) throws IOException {
-		//TODO: check if block already there
+		// check if we have the block
+		if(getBlocksPresent().get(index)) {
+			// ignore it - dont overwrite
+			// should we throw an exception?
+			return;
+		}
 		
 		// process
 		file_access.seek(blockSize()*index);
@@ -315,7 +313,7 @@ public class FileTransfer {
 			           "blocksize=" + blockSize() + ", " +
 			           "numblocks=" + num_blocks_present + "/" + numBlocks() + ", " +
 			           "numTrackers=" + tracker_list.size() + ", " +
-			           "numSeeds=" + seed_list.size();
+			           "numSeeds=" + downloader.seedList().size();
 		}
 		else {
 			metadata = "no metadata";

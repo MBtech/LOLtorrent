@@ -9,13 +9,13 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import filesharing.core.TrackerRequestProcessor;
-import filesharing.core.client.PeerInformation;
-import filesharing.core.message.tracker.request.PeerListRequestMessage;
-import filesharing.core.message.tracker.request.RegisterPeerRequestMessage;
-import filesharing.core.message.tracker.request.TrackerRequestMessage;
-import filesharing.core.message.tracker.response.PeerListResponseMessage;
-import filesharing.core.message.tracker.response.SuccessResponseMessage;
+import filesharing.core.connection.PeerConnection;
+import filesharing.core.processor.TrackerRequestProcessor;
+import filesharing.message.tracker.request.PeerListRequestMessage;
+import filesharing.message.tracker.request.RegisterPeerRequestMessage;
+import filesharing.message.tracker.request.TrackerRequestMessage;
+import filesharing.message.tracker.response.PeerListResponseMessage;
+import filesharing.message.tracker.response.SuccessResponseMessage;
 
 public class TrackerRequestHandler implements Runnable, TrackerRequestProcessor {
 	
@@ -59,6 +59,7 @@ public class TrackerRequestHandler implements Runnable, TrackerRequestProcessor 
 			}
 		}
 		catch (IOException | ClassNotFoundException e) {
+			log(e.toString());
 			// just exit silently
 			//log(sock.getRemoteSocketAddress() + ": disconnected");
 		}
@@ -76,11 +77,11 @@ public class TrackerRequestHandler implements Runnable, TrackerRequestProcessor 
 		
 		// initialize
 		String filename = msg.filename();
-		
+
 		// check if file is registered
 		if(tracker.peerRecord().containsKey(filename)) {
 			// if it is, return peer list
-			Collection<PeerInformation> peer_list = tracker.peerRecord().get(filename);
+			Collection<PeerConnection> peer_list = tracker.peerRecord().get(filename);
 			os.writeObject(new PeerListResponseMessage(peer_list));
 		}
 		else {
@@ -103,11 +104,11 @@ public class TrackerRequestHandler implements Runnable, TrackerRequestProcessor 
 		// check if this file has not been registered yet
 		if(!tracker.peerRecord().containsKey(filename)) {
 			// if not, create a new set to store peers for that file
-			tracker.peerRecord().put(filename, Collections.synchronizedSet(new HashSet<PeerInformation>()));
+			tracker.peerRecord().put(filename, Collections.synchronizedSet(new HashSet<PeerConnection>()));
 		}
 		// add the peer to the list of peers for the given filename
-		Set<PeerInformation> peer_list = tracker.peerRecord().get(filename);
-		peer_list.add(new PeerInformation(sock.getInetAddress().getHostAddress(), data_port));
+		Set<PeerConnection> peer_list = tracker.peerRecord().get(filename);
+		peer_list.add(new PeerConnection(sock.getInetAddress().getHostAddress(), data_port));
 		
 		// send response to client
 		os.writeObject(new SuccessResponseMessage());

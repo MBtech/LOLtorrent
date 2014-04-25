@@ -1,22 +1,21 @@
 package filesharing.core.client;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.Socket;
 import java.util.BitSet;
 
-import filesharing.core.PeerResponseProcessor;
-import filesharing.core.exception.DownloadCompleteException;
-import filesharing.core.exception.NoNewBlocksForDownloadException;
-import filesharing.core.exception.PeerErrorException;
-import filesharing.core.message.peer.request.BlocksPresentRequestMessage;
-import filesharing.core.message.peer.request.FileBlockRequestMessage;
-import filesharing.core.message.peer.response.BlocksPresentResponseMessage;
-import filesharing.core.message.peer.response.FileBlockResponseMessage;
-import filesharing.core.message.peer.response.FileMetadataResponseMessage;
-import filesharing.core.message.peer.response.PeerErrorResponseMessage;
-import filesharing.core.message.peer.response.PeerResponseMessage;
+import filesharing.core.connection.PeerConnection;
+import filesharing.core.processor.PeerResponseProcessor;
+import filesharing.exception.DownloadCompleteException;
+import filesharing.exception.NoNewBlocksForDownloadException;
+import filesharing.exception.PeerErrorException;
+import filesharing.message.peer.request.BlocksPresentRequestMessage;
+import filesharing.message.peer.request.FileBlockRequestMessage;
+import filesharing.message.peer.request.FileMetadataRequestMessage;
+import filesharing.message.peer.request.PeerRequestMessage;
+import filesharing.message.peer.response.BlocksPresentResponseMessage;
+import filesharing.message.peer.response.FileBlockResponseMessage;
+import filesharing.message.peer.response.FileMetadataResponseMessage;
+import filesharing.message.peer.response.PeerErrorResponseMessage;
 
 public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 	
@@ -28,41 +27,40 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 	/**
 	 * The peer to connect to and make requests
 	 */
-	private PeerInformation peer_information;
+	private PeerConnection peer_information;
 	
 	/**
 	 * Set of blocks present in the peer
 	 */
-	private BitSet peer_blocks_present;
+	private BitSet peer_blocks_present = new BitSet();
 	
 	/**
 	 * Constructs a new downloader thread
 	 * @param downloader the parent downloader
 	 * @param peer_information information about the peer to connect to
 	 */
-	public FileDownloaderThread(FileDownloader downloader, PeerInformation peer_information) {
+	public FileDownloaderThread(FileDownloader downloader, PeerConnection peer_information) {
 		this.downloader = downloader;
 		this.peer_information = peer_information;
-		this.peer_blocks_present = new BitSet(downloader.getFileTransfer().numBlocks());
 	}
 	
+	/**
+	 * Returns a set of which blocks are present in the remote peer
+	 * @return blocks present in remote peer
+	 */
 	protected BitSet getPeerBlocksPresent() {
 		return peer_blocks_present;
 	}
 	
 	/**
-	 * updates peer information about the blocks he has
-	 * FIXME: passing a socket is awful!!
-	 * @param sock an open socket to the client
-	 * @throws ClassNotFoundException if message received was garbage
+	 * Requests metadata from remote peer
+	 * @throws IOException if there is a problem with the connection
+	 * @throws ClassNotFoundException if response from peer is malformed
 	 */
-	private void updatePeerBlocks(Socket sock) throws IOException, ClassNotFoundException {
+	protected void requestMetadata() throws IOException, ClassNotFoundException {
 		String filename = downloader.getFileTransfer().filename();
-		ObjectOutputStream os = new ObjectOutputStream(sock.getOutputStream());
-		ObjectInputStream is = new ObjectInputStream(sock.getInputStream());
-		os.writeObject(new BlocksPresentRequestMessage(filename));
-		PeerResponseMessage msg = (PeerResponseMessage) is.readObject();
-		msg.accept(this);
+		PeerRequestMessage msg = new FileMetadataRequestMessage(filename);
+		peer_information.sendMessage(msg, this);
 	}
 
 	/**
@@ -73,41 +71,33 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 		try {
 			// setup
 			String filename = downloader.getFileTransfer().filename();
-			PeerResponseMessage msg;
-
-			// connect to peer
-			Socket sock = peer_information.connect();
-			ObjectOutputStream os = new ObjectOutputStream(sock.getOutputStream());
-			ObjectInputStream is = new ObjectInputStream(sock.getInputStream());
+			PeerRequestMessage msg;
 			
-			// check which blocks are present in peer
-			os.writeObject(new BlocksPresentRequestMessage(filename));
-			msg = (PeerResponseMessage) is.readObject();
-			msg.accept(this);
+			// request the blocks the peer has
+			msg = new BlocksPresentRequestMessage(filename);
+			peer_information.sendMessage(msg, this);
 			
 			// download the blocks
 			while(true) {
 				try {
 					int block_index = downloader.getBlockIndexForDownload(this);
-					os.writeObject(new FileBlockRequestMessage(filename, block_index));
-					msg = (PeerResponseMessage) is.readObject();
-					msg.accept(this);
+					msg = new FileBlockRequestMessage(filename, block_index);
+					peer_information.sendMessage(msg, this);
 				}
 				catch(DownloadCompleteException e) {
 					// download is complete, our work here is done
-					System.out.println("FILE DOWNLOAD COMPLETE YAY!");
+					downloader.log("download complete! thread exiting!");
 					break;
 				}
 				catch(NoNewBlocksForDownloadException e) {
-					// peer is useless, at least for now
-					updatePeerBlocks(sock);
+					// peer has no new blocks
+					// request which blocks peer has again and try again
+					msg = new FileMetadataRequestMessage(filename);
+					peer_information.sendMessage(msg, this);
 					continue;
 				}
 			}
-			
-			// close connection to peer
-			sock.close();
-		} catch (ClassNotFoundException | IOException e) {
+		} catch (IOException e) {
 			// something really bad happened
 			//e.printStackTrace();
 			downloader.log(e.getMessage());
@@ -124,11 +114,11 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 
 	/**
 	 * processes metadata received from peers
+	 * @throws IOException 
 	 */
 	@Override
-	public void processFileMetadataResponseMessage(FileMetadataResponseMessage msg) {
-		// nothing to do - this is not being dealt with here
-		// FIXME but probably should!
+	public void processFileMetadataResponseMessage(FileMetadataResponseMessage msg) throws IOException {
+		downloader.getFileTransfer().setMetadata(msg.fileSize(), msg.blockSize());
 	}
 
 	/**

@@ -8,7 +8,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import filesharing.core.client.PeerInformation;
+import filesharing.core.connection.PeerConnection;
 
 public class TrackerDaemon implements Runnable {
 	
@@ -35,7 +35,7 @@ public class TrackerDaemon implements Runnable {
 	/**
 	 * Contains a list of peers for each file
 	 */
-	static Hashtable<String,Set<PeerInformation>> peer_record = new Hashtable<String,Set<PeerInformation>>();
+	static Hashtable<String,Set<PeerConnection>> peer_record = new Hashtable<String,Set<PeerConnection>>();
 	
 	/**
 	 * Setup a tracker in user defined port
@@ -58,7 +58,7 @@ public class TrackerDaemon implements Runnable {
 	 * Returns the list of peers for all files currently being tracked
 	 * @return the peer records for all files
 	 */
-	public Hashtable<String, Set<PeerInformation>> peerRecord() {
+	public Hashtable<String, Set<PeerConnection>> peerRecord() {
 		return peer_record;
 	}
 
