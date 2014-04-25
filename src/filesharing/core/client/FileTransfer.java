@@ -297,11 +297,11 @@ public class FileTransfer {
 	 */
 	protected synchronized void writeBlock(int index, byte[] block) throws IOException {
 		//TODO: check if block already there
-		System.out.println("writing " + block.length + " bytes (block " + index + ")");
 		
 		// process
 		file_access.seek(blockSize()*index);
 		file_access.write(block);
+		blocks_present.set(index);
 	}
 	
 	/**

@@ -4,12 +4,15 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.BitSet;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import filesharing.core.PeerResponseProcessor;
 import filesharing.core.TrackerResponseProcessor;
+import filesharing.core.exception.DownloadCompleteException;
+import filesharing.core.exception.NoNewBlocksForDownloadException;
 import filesharing.core.exception.PeerErrorException;
 import filesharing.core.exception.RequestFailedException;
 import filesharing.core.message.peer.request.FileMetadataRequestMessage;
@@ -46,6 +49,11 @@ public class FileDownloader implements Runnable, PeerResponseProcessor, TrackerR
 	private FileTransfer file_transfer;
 	
 	/**
+	 * Set of blocks assigned for downloading
+	 */
+	private BitSet blocks_for_download;
+	
+	/**
 	 * Constructor
 	 * @param file_info information about file to download
 	 */
@@ -60,8 +68,64 @@ public class FileDownloader implements Runnable, PeerResponseProcessor, TrackerR
 		runner_thread.start();
 	}
 	
+	/**
+	 * Returns the file transfer instance associated with this downloader
+	 * @return file transfer
+	 */
 	protected FileTransfer getFileTransfer() {
 		return file_transfer;
+	}
+	
+	/**
+	 * Returns the bit set with the blocks that have been assigned for download
+	 * @return blocks for download
+	 */
+	protected BitSet getBlocksForDownload() {
+		return blocks_for_download;
+	}
+	
+	/**
+	 * Returns a block index for a thread to download
+	 * @return block index
+	 */
+	protected synchronized int getBlockIndexForDownload(FileDownloaderThread peer) {
+		String filename = file_transfer.filename();
+		BitSet local_blocks = file_transfer.getBlocksPresent();
+		BitSet peer_blocks = peer.getPeerBlocksPresent();
+		
+		// check if we already have all the blocks
+		if(local_blocks.cardinality() == file_transfer.numBlocks()) {
+			throw new DownloadCompleteException("download of file " + filename + " is finished");
+		}
+		
+		// check which blocks peer has that we dont have
+		BitSet peer_new_blocks = new BitSet();
+		peer_new_blocks.or(peer_blocks);
+		peer_new_blocks.andNot(local_blocks);
+		
+		// check which blocks peer has that we dont have
+		// and that we have not requested for download yet
+		BitSet blocks_interest = new BitSet();
+		blocks_interest.or(peer_new_blocks);
+		blocks_interest.andNot(this.blocks_for_download);
+		
+		//check if peer does not have any new blocks at all
+		if(peer_new_blocks.cardinality() == 0) {
+			throw new NoNewBlocksForDownloadException("peer has no new blocks for file " + filename);
+		}
+		
+		// check if peer does not have any blocks that are not present or assigned
+		if(blocks_interest.cardinality() == 0) {
+			// assign one that has already been assigned then ("endgame"?)
+			return peer_new_blocks.nextSetBit(0);
+		}
+		else {
+			// assign a block that has never been requested for download
+			int block_index = blocks_interest.nextSetBit(0);
+			this.blocks_for_download.set(block_index);
+			return block_index;
+		}
+		
 	}
 	
 	/**
@@ -129,6 +193,8 @@ public class FileDownloader implements Runnable, PeerResponseProcessor, TrackerR
 
 	@Override
 	public void run() {
+		// initialize
+		blocks_for_download = new BitSet(file_transfer.numBlocks());
 		// start a downloader thread for every peer
 		for(PeerInformation peer_info : file_transfer.seedList()) {
 			executor.execute(new FileDownloaderThread(this, peer_info));

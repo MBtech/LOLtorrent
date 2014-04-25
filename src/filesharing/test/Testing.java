@@ -20,6 +20,12 @@ public class Testing {
 		TrackerDaemon t = new TrackerDaemon();
 		t.start();
 		
+		// client 0 seeds file
+		Client c0 = new Client("0");
+		c0.setWorkingDirectory("/tmp/c1"); // XXX
+		c0.addTracker("localhost", TrackerDaemon.DEFAULT_TRACKER_PORT);
+		c0.seedFile("/tmp/c1/irs.txt", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
+		
 		// client 1 seeds file
 		Client c1 = new Client("1");
 		c1.setWorkingDirectory("/tmp/c1"); // XXX
@@ -34,11 +40,12 @@ public class Testing {
 
 		// print information every second
 		for(int i=0; i<=2; i++) {
-			System.out.println("");
-			System.out.println("@@ << t = " + i + " seconds >> @@");
-			System.out.println(c1);
-			System.out.println(c2);
-			System.out.println("");
+//			System.out.println("");
+//			System.out.println("@@ << t = " + i + " seconds >> @@");
+//			System.out.println(c0);
+//			System.out.println(c1);
+//			System.out.println(c2);
+//			System.out.println("");
 			Thread.sleep(1000);
 		}
 		
