@@ -7,15 +7,11 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.commons.lang3.RandomStringUtils;
 
@@ -45,7 +41,7 @@ public class FileClient implements Serializable {
 	/**
 	 * List of trackers to connect by default (should it be here...?)
 	 */
-	private List<TrackerConnection> trackerList = new ArrayList<TrackerConnection>();
+	private Set<TrackerConnection> trackerList = new TreeSet<TrackerConnection>();
 	
 	/**
 	 * List of files in the client
@@ -57,7 +53,7 @@ public class FileClient implements Serializable {
 	 * List of file namess in the client
 	 * Indexed by filename for faster searching
 	 */
-	private Set<String> filenameList = new HashSet<String>();
+	private Set<String> filenameList = new TreeSet<String>();
 	
 	/**
 	 * Creates a client with a random ID
@@ -104,7 +100,7 @@ public class FileClient implements Serializable {
 	 * Returns the default tracker list for the client
 	 * @return tracker list
 	 */
-	public List<TrackerConnection> trackerList() {
+	public Set<TrackerConnection> trackerList() {
 		return trackerList;
 	}
 	
@@ -122,7 +118,7 @@ public class FileClient implements Serializable {
 	 * @param filename name of the file
 	 * @throws IOException
 	 */
-	public void addFile(String filename, Collection<TrackerConnection> trackers) throws IOException {
+	public void addFile(String filename, Set<TrackerConnection> trackers) throws IOException {
 		if(!fileList.containsKey(filename)) {
 			// nope - add a new entry to the list
 			File file = getLocalFile(filename);
@@ -148,7 +144,7 @@ public class FileClient implements Serializable {
 	 * @param trackers the list of trackers to be used for the file
 	 * @throws IOException 
 	 */
-	public void downloadFile(String filename, Collection<TrackerConnection> trackers) throws IOException {
+	public void downloadFile(String filename, Set<TrackerConnection> trackers) throws IOException {
 		// add file to list
 		addFile(filename, trackers);
 		// start download
@@ -170,7 +166,7 @@ public class FileClient implements Serializable {
 	 * @param path local path to file to be seeded
 	 * @throws IOException 
 	 */
-	public void seedFile(String filename, int block_size, Collection<TrackerConnection> trackers) throws IOException {
+	public void seedFile(String filename, int block_size, Set<TrackerConnection> trackers) throws IOException {
 		// add file to list
 		addFile(filename, trackers);
 		// start seeding
@@ -261,11 +257,10 @@ public class FileClient implements Serializable {
 		client += " dir=" + workingDirectory();
 		
 		// get files description
-		Iterator<Entry<String, FileTransfer>> it = fileList.entrySet().iterator();
-		while(it.hasNext()) {
-			Entry<String, FileTransfer> entry = it.next();
+		for(Entry<String, FileTransfer> entry : fileList.entrySet()) {
 			files += nl + "- " + entry.getValue();
 		}
+		
 		return "[CLIENT" + client + "]" + files;
 	}
 

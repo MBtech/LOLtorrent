@@ -9,7 +9,7 @@ import java.net.Socket;
 /**
  * This is a connection handler - handles connectivity for a single socket
  */
-public abstract class ConnectionHandler implements Serializable {
+public class ConnectionHandler implements Serializable, Comparable<ConnectionHandler> {
 
 	/**
 	 * Tracker hostname
@@ -48,6 +48,7 @@ public abstract class ConnectionHandler implements Serializable {
 			sock = new Socket(host(), port());
 			os = new ObjectOutputStream(sock.getOutputStream());
 			is = new ObjectInputStream(sock.getInputStream());
+			return;
 		}
 	}
 	
@@ -66,20 +67,15 @@ public abstract class ConnectionHandler implements Serializable {
 	public int port() {
 		return port;
 	}
-	
+
 	/**
-	 * Compares itself to another object
-	 * The two objects are the same if they are both connection handlers and both
-	 * the host and port are the same.
+	 * Compares itself to another connection handler
+	 * Required by sets to check if two objects are the same
+	 * Returns 0 if the same, negative if "smaller", positive if "bigger"
 	 */
 	@Override
-	public boolean equals(Object obj) {
-		if(!(obj instanceof TrackerConnection)) {
-			return false;
-		}
-		TrackerConnection tinfo = (TrackerConnection) obj;
-		return host().equals(tinfo.host())
-		    && port() == tinfo.port();
+	public int compareTo(ConnectionHandler handler) {
+		return (this.host()+this.port()).compareTo(handler.host()+handler.port);
 	}
 	
 	/**

@@ -3,12 +3,14 @@ package filesharing.core.client;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.io.Serializable;
 import java.util.BitSet;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import filesharing.core.connection.PeerConnection;
 import filesharing.core.connection.TrackerConnection;
@@ -29,6 +31,11 @@ import filesharing.message.tracker.response.TrackerErrorResponseMessage;
 public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	
 	/**
+	 * Delay between asking tracker for new peers
+	 */
+	public static final int TRACKER_QUERY_DELAY = 1000; // 30 seconds
+	
+	/**
 	 * Downloader thread
 	 */
 	private Thread runnerThread = new Thread(this);
@@ -37,6 +44,11 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	 * Pool of downloading threads
 	 */
 	private ExecutorService executor = Executors.newCachedThreadPool();
+	
+	/**
+	 * Pool of scheduled/periodic tasks
+	 */
+	private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 	
 	/**
 	 * File transfer associated with this downloader
@@ -56,7 +68,7 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	/**
 	 * List of seeders
 	 */
-	private Set<PeerConnection> seedList = new HashSet<PeerConnection>();
+	private Set<PeerConnection> seedList = Collections.synchronizedSet(new TreeSet<PeerConnection>());
 	
 	/**
 	 * Constructor
@@ -158,7 +170,7 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	/**
 	 * Updates peer list
 	 */
-	private void updatePeerList() {
+	private synchronized void updatePeerList() {
 		String filename = fileTransfer.filename();
 		
 		// connect to trackers and ask for peers for this file
@@ -214,7 +226,17 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 			blocksForDownload = new BitSet(fileTransfer.numBlocks());
 			this.fileAccess = new RandomAccessFile(fileTransfer.getLocalFile(), "rws");
 			
-			//TODO: request periodically for new peers
+			final FileDownloader downloader = this;
+			
+			// setup periodic tasks
+			// update peer lists regularly
+			Runnable periodicPeerListUpdateTask = new Runnable() {
+				@Override public void run() {
+					downloader.log("Updating peer list");
+					downloader.updatePeerList();
+				}
+			};
+			this.scheduler.scheduleAtFixedRate(periodicPeerListUpdateTask, 0, TRACKER_QUERY_DELAY, TimeUnit.SECONDS);
 			
 			// start a downloader thread for every peer
 			for(PeerConnection peer_info : seedList()) {
@@ -231,8 +253,9 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	 * Starts execution of the file downloader in a new thread
 	 */
 	public void start() {
-		System.out.println("DOWNLOADER STARTING");
-		runnerThread.start();
+		if(!runnerThread.isAlive()) {
+			runnerThread.start();
+		}
 	}
 	
 	/**
@@ -272,6 +295,11 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 		// add all peers to our set
 		seedList().addAll(msg.peerList());
 		
-		//TODO: notify downloader of newly retrieved peers
+		// if already downloading, start downloading also from the new peers
+		if(fileTransfer.isDownloading()) {
+			for(PeerConnection peer : msg.peerList()) {
+				executor.execute(new FileDownloaderThread(this, peer));
+			}
+		}
 	}
 }

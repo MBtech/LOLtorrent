@@ -9,9 +9,9 @@ import java.io.ObjectOutputStream;
 import java.io.RandomAccessFile;
 import java.io.Serializable;
 import java.util.BitSet;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.Set;
+import java.util.TreeSet;
 
 import com.google.common.io.Files;
 
@@ -33,7 +33,7 @@ public class FileTransfer implements Serializable {
 	/**
 	 * Default block size in bytes
 	 */
-	public static final int DEFAULT_BLOCK_SIZE = 1;//(int) (1024*1024*1.4);
+	public static final int DEFAULT_BLOCK_SIZE = 1024;//(int) (1024*1024*1.4);
 	
 	/**
 	 * The client with this file transfer
@@ -78,7 +78,7 @@ public class FileTransfer implements Serializable {
 	/**
 	 * List of trackers to connect
 	 */
-	private Set<TrackerConnection> trackerList = new HashSet<TrackerConnection>();
+	private Set<TrackerConnection> trackerList = Collections.synchronizedSet(new TreeSet<TrackerConnection>());
 	
 	/**
 	 * File metadata: file size (in bytes)
@@ -113,7 +113,7 @@ public class FileTransfer implements Serializable {
 	 * Add a list of trackers for this file
 	 * @param new_trackers a collection of tracker information objects
 	 */
-	public synchronized void addTrackers(Collection<TrackerConnection> new_trackers) {
+	public void addTrackers(Set<TrackerConnection> new_trackers) {
 		trackerList.addAll(new_trackers);
 	}
 	
@@ -122,7 +122,7 @@ public class FileTransfer implements Serializable {
 	 * @param address tracker address
 	 * @param port tracker port
 	 */
-	public synchronized void addTracker(String address, int port) {
+	public void addTracker(String address, int port) {
 		trackerList.add(new TrackerConnection(address, port));
 	}
 	
@@ -222,7 +222,7 @@ public class FileTransfer implements Serializable {
 	 * Saves file transfer state in persistent storage
 	 * @throws IOException
 	 */
-	public void saveState() throws IOException {
+	public synchronized void saveState() throws IOException {
 		// compute file location
 		File file = new File(localFile.getAbsolutePath() + FILE_EXTENSION);
 		
@@ -240,7 +240,7 @@ public class FileTransfer implements Serializable {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public void loadState() throws IOException, ClassNotFoundException {
+	public synchronized void loadState() throws IOException, ClassNotFoundException {
 		// compute file location
 		File file = new File(localFile.getAbsolutePath() + FILE_EXTENSION);
 		
@@ -388,9 +388,9 @@ public class FileTransfer implements Serializable {
 			           "seeding? " + (isSeeding() ? "yes" : "no") + ", " +
 			           "filesize=" + fileSize() + " Bytes, " +
 			           "blocksize=" + blockSize() + " Bytes, " +
-			           "blocks present=" + num_blocks_present + "/" + numBlocks() + ", " +
+			           "blocks=" + num_blocks_present + "/" + numBlocks() + ", " +
 			           "numTrackers=" + trackerList.size() + ", " +
-			           "numSeeds=" + downloader.seedList().size();
+			           "numPeers=" + downloader.seedList().size();
 		}
 		else {
 			metadata = "no metadata";

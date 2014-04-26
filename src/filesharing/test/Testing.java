@@ -24,25 +24,32 @@ public class Testing {
 		// client 0 seeds file
 		FileClient s1 = new FileClient("/tmp/c1", "S1"); // XXX
 		s1.addTracker("localhost", TrackerDaemon.DEFAULT_TRACKER_PORT);
-		s1.seedFile("bigfile", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
+//		s1.seedFile("bigfile", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
 		s1.seedFile("hello.txt", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
 		s1.seedFile("test.txt", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
 		
 		// client 1 seeds file
 		FileClient s2 = new FileClient("/tmp/c1", "S2"); // XXX
 		s2.addTracker("localhost", TrackerDaemon.DEFAULT_TRACKER_PORT);
-		s2.seedFile("bigfile", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
+//		s2.seedFile("bigfile", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
 		s2.seedFile("hello.txt", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
 		s2.seedFile("test.txt", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
 		
 		// must wait a bit - seedFile method calls are asynchronous
-		Thread.sleep(1000);
+		Thread.sleep(2000);
 		
 		// client 2 downloads the file from client 1
 		FileClient c1 = new FileClient("/tmp/c2", "C1"); // XXX
-		c1.loadState();
+		
+		
+//		try {
+//			c1.loadState();
+//		}
+//		catch(Exception e) {
+//		}
+
 		c1.addTracker("localhost", TrackerDaemon.DEFAULT_TRACKER_PORT);
-		c1.downloadFile("bigfile"); // XXX
+//		c1.downloadFile("bigfile"); // XXX
 		c1.downloadFile("hello.txt"); // XXX
 		c1.downloadFile("test.txt"); // XXX
 		
@@ -65,21 +72,11 @@ public class Testing {
 //			e.printStackTrace();
 //			System.out.println(e.getMessage());
 //		}
-
-		// print information every second
-		for(int i=0; i<=2; i++) {
-//			System.out.println("");
-//			System.out.println("@@ << t = " + i + " seconds >> @@");
-//			System.out.println(c0);
-//			System.out.println(c1);
-//			System.out.println(c2);
-//			System.out.println("");
-			Thread.sleep(1000);
-		}
 		
 		// force quit of the application
-		Thread.sleep(100);
+		Thread.sleep(1000);
 		c1.saveState();
+		System.out.println(c1);
 		System.exit(0);
 		
 	}
