@@ -17,6 +17,10 @@ import filesharing.message.tracker.request.TrackerRequestMessage;
 import filesharing.message.tracker.response.PeerListResponseMessage;
 import filesharing.message.tracker.response.SuccessResponseMessage;
 
+/**
+ * This is a tracker thread - processes tracker requests from a single client,
+ * and sends back the response
+ */
 public class TrackerRequestHandler implements Runnable, TrackerRequestProcessor {
 	
 	/**
@@ -42,6 +46,14 @@ public class TrackerRequestHandler implements Runnable, TrackerRequestProcessor 
 		this.is = new ObjectInputStream(sock.getInputStream());
 		this.os = new ObjectOutputStream(sock.getOutputStream());
 	}
+	
+	/**
+	 * Log message to console
+	 * @param msg
+	 */
+	public void log(String msg) {
+		tracker.log(msg);
+	}
 
 	/**
 	 * Tracker request handler main thread - processes requests from a single client
@@ -63,10 +75,6 @@ public class TrackerRequestHandler implements Runnable, TrackerRequestProcessor 
 			// just exit silently
 			//log(sock.getRemoteSocketAddress() + ": disconnected");
 		}
-	}
-	
-	public void log(String msg) {
-		tracker.log(msg);
 	}
 
 	/**

@@ -1,6 +1,9 @@
 package filesharing.core.client;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.io.Serializable;
 import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Set;
@@ -22,15 +25,13 @@ import filesharing.message.tracker.response.TrackerErrorResponseMessage;
 /**
  * File metadata and content downloader - makes requests to peers and handles
  * responses
- * @author anatoly
- *
  */
-public class FileDownloader implements Runnable, TrackerResponseProcessor {
+public class FileDownloader implements Serializable, Runnable, TrackerResponseProcessor {
 	
 	/**
 	 * Downloader thread
 	 */
-	private Thread runner_thread = new Thread(this);
+	private Thread runnerThread = new Thread(this);
 	
 	/**
 	 * Pool of downloading threads
@@ -40,26 +41,37 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	/**
 	 * File transfer associated with this downloader
 	 */
-	private FileTransfer file_transfer;
+	private FileTransfer fileTransfer;
+	
+	/**
+	 * An object for random access to the local file
+	 */
+	private RandomAccessFile fileAccess;
 	
 	/**
 	 * Set of blocks assigned for downloading
 	 */
-	private BitSet blocks_for_download;
+	private BitSet blocksForDownload;
+	
+	/**
+	 * List of seeders
+	 */
+	private Set<PeerConnection> seedList = new HashSet<PeerConnection>();
 	
 	/**
 	 * Constructor
-	 * @param file_info information about file to download
+	 * @param file_transfer information about file to download
+	 * @throws FileNotFoundException 
 	 */
-	public FileDownloader(FileTransfer file_info) {
-		this.file_transfer = file_info;
+	public FileDownloader(FileTransfer file_transfer) throws FileNotFoundException {
+		this.fileTransfer = file_transfer;
 	}
 	
 	/**
 	 * Starts execution of the file downloader in a new thread
 	 */
 	public void start() {
-		runner_thread.start();
+		runnerThread.start();
 	}
 	
 	/**
@@ -67,7 +79,7 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	 * @return file transfer
 	 */
 	protected FileTransfer getFileTransfer() {
-		return file_transfer;
+		return fileTransfer;
 	}
 	
 	/**
@@ -75,7 +87,7 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	 * @return blocks for download
 	 */
 	protected BitSet getBlocksForDownload() {
-		return blocks_for_download;
+		return blocksForDownload;
 	}
 	
 	/**
@@ -83,25 +95,40 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	 * @return set of information of peers
 	 */
 	protected Set<PeerConnection> seedList() {
-		return seed_list;
+		return seedList;
 	}
 	
 	/**
-	 * List of seeders
+	 * Writes a file block to local storage
+	 * @param index block number (zero-indexed)
+	 * @param block the contents of the block
+	 * @throws IOException on write operation failure
 	 */
-	private Set<PeerConnection> seed_list = new HashSet<PeerConnection>();
+	protected synchronized void writeBlock(int index, byte[] block) throws IOException {
+		// check if we have the block
+		if(fileTransfer.getBlocksPresent().get(index)) {
+			// ignore it - dont overwrite
+			// should we throw an exception?
+			return;
+		}
+		
+		// process
+		fileAccess.seek(fileTransfer.blockSize() * index);
+		fileAccess.write(block);
+		fileTransfer.getBlocksPresent().set(index);
+	}
 	
 	/**
 	 * Returns a block index for a thread to download
 	 * @return block index
 	 */
 	protected synchronized int getBlockIndexForDownload(FileDownloaderThread peer) {
-		String filename = file_transfer.filename();
-		BitSet local_blocks = file_transfer.getBlocksPresent();
+		String filename = fileTransfer.filename();
+		BitSet local_blocks = fileTransfer.getBlocksPresent();
 		BitSet peer_blocks = peer.getPeerBlocksPresent();
 		
 		// check if we already have all the blocks
-		if(local_blocks.cardinality() == file_transfer.numBlocks()) {
+		if(local_blocks.cardinality() == fileTransfer.numBlocks()) {
 			throw new DownloadCompleteException("download of file " + filename + " is finished");
 		}
 		
@@ -114,7 +141,7 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 		// and that we have not requested for download yet
 		BitSet blocks_interest = new BitSet();
 		blocks_interest.or(peer_new_blocks);
-		blocks_interest.andNot(this.blocks_for_download);
+		blocks_interest.andNot(this.blocksForDownload);
 		
 		//check if peer does not have any new blocks at all
 		if(peer_new_blocks.cardinality() == 0) {
@@ -129,7 +156,7 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 		else {
 			// assign a block that has never been requested for download
 			int block_index = blocks_interest.nextSetBit(0);
-			this.blocks_for_download.set(block_index);
+			this.blocksForDownload.set(block_index);
 			return block_index;
 		}
 		
@@ -139,10 +166,10 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	 * Updates peer list
 	 */
 	private void updatePeerList() {
-		String filename = file_transfer.filename();
+		String filename = fileTransfer.filename();
 		
 		// connect to trackers and ask for peers for this file
-		for(TrackerConnection tracker : file_transfer.getTrackers()) {
+		for(TrackerConnection tracker : fileTransfer.getTrackers()) {
 			try {
 				// send request
 				TrackerRequestMessage msg = new PeerListRequestMessage(filename);
@@ -157,7 +184,7 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	
 	public void fetchMetadata() throws IOException {
 		// setup
-		String filename = file_transfer.filename();
+		String filename = fileTransfer.filename();
 		
 		// update the peer list of peers
 		updatePeerList();
@@ -167,6 +194,8 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 			try {
 				FileDownloaderThread fdt = new FileDownloaderThread(this, peer);
 				fdt.requestMetadata();
+				// stop if we get the metadata
+				if(fileTransfer.hasMetadata()) break;
 			}
 			catch(IOException | ClassNotFoundException e) {
 				// communication failed or bad response from peer - ignore it
@@ -175,7 +204,7 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 		}
 		
 		// check if after all this we indeed have the metadata
-		if(!file_transfer.hasMetadata()) {
+		if(!fileTransfer.hasMetadata()) {
 			// no?! die miserably then
 			log("could not fetch metadata for file " + filename);
 			throw new NoMetadataException("all the peers were mean to me: could not fetch metadata");
@@ -187,7 +216,7 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	 * @param msg message to log
 	 */
 	protected void log(String msg) {
-		file_transfer.log("[DOWN] " + msg);
+		fileTransfer.log("[DOWN] " + msg);
 	}
 
 	/**
@@ -195,11 +224,21 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	 */
 	@Override
 	public void run() {
-		// initialize
-		blocks_for_download = new BitSet(file_transfer.numBlocks());
-		// start a downloader thread for every peer
-		for(PeerConnection peer_info : seedList()) {
-			executor.execute(new FileDownloaderThread(this, peer_info));
+		try {
+			// initialize
+			blocksForDownload = new BitSet(fileTransfer.numBlocks());
+			this.fileAccess = new RandomAccessFile(fileTransfer.getLocalFile(), "rws");
+			
+			//TODO: request periodically for new peers
+			
+			// start a downloader thread for every peer
+			for(PeerConnection peer_info : seedList()) {
+				executor.execute(new FileDownloaderThread(this, peer_info));
+			}
+		}
+		catch(FileNotFoundException e) {
+			// something weird happened
+			log("Error starting downloader - local file not found");
 		}
 	}
 	

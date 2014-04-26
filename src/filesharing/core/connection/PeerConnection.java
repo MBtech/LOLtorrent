@@ -8,7 +8,8 @@ import filesharing.message.peer.request.PeerRequestMessage;
 import filesharing.message.peer.response.PeerResponseMessage;
 
 /**
- * Represents information about a peer
+ * This is a connection handler for peer connections
+ * Extends connection handler with the capability of making requests to peers
  */
 public class PeerConnection extends ConnectionHandler {
 	

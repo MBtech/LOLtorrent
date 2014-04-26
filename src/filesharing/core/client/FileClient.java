@@ -1,18 +1,23 @@
 package filesharing.core.client;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.lang3.RandomStringUtils;
-
-import com.google.common.io.Files;
 
 import filesharing.core.connection.TrackerConnection;
 
@@ -20,7 +25,12 @@ import filesharing.core.connection.TrackerConnection;
  * This is a client - it can seed and download files from other clients
  * It connects to a tracker for peer discovery
  */
-public class FileClient {
+public class FileClient implements Serializable {
+	
+	/**
+	 * Extension for files storing client state
+	 */
+	public static final String FILE_EXTENSION = ".client";
 	
 	/**
 	 * A local identifier for the client
@@ -30,18 +40,40 @@ public class FileClient {
 	/**
 	 * The working directory for the client
 	 */
-	private File working_dir = Files.createTempDir();
+	private File workingDir;
 	
 	/**
 	 * List of trackers to connect by default (should it be here...?)
 	 */
-	private List<TrackerConnection> tracker_list = new ArrayList<TrackerConnection>();
+	private List<TrackerConnection> trackerList = new ArrayList<TrackerConnection>();
 	
 	/**
 	 * List of files in the client
 	 * Indexed by filename for faster searching
 	 */
-	private Map<String, FileTransfer> file_list = new HashMap<String, FileTransfer>();
+	private transient Map<String, FileTransfer> fileList = new HashMap<String, FileTransfer>();
+	
+	/**
+	 * List of file namess in the client
+	 * Indexed by filename for faster searching
+	 */
+	private Set<String> filenameList = new HashSet<String>();
+	
+	/**
+	 * Creates a client with a random ID
+	 */
+	public FileClient(String working_dir) {
+		this(working_dir, RandomStringUtils.randomAlphabetic(5));
+	}
+	
+	/**
+	 * Creates a client with the specified ID
+	 * @param id a string identifier
+	 */
+	public FileClient(String working_dir, String id) {
+		this.id = id;
+		this.workingDir = new File(working_dir);
+	}
 	
 	/**
 	 * Add a tracker to the list
@@ -49,22 +81,7 @@ public class FileClient {
 	 * @param port tracker port
 	 */
 	public void addTracker(String address, int port) {
-		tracker_list.add(new TrackerConnection(address, port));
-	}
-	
-	/**
-	 * Creates a client with a random ID
-	 */
-	public FileClient() {
-		this(RandomStringUtils.randomAlphabetic(5));
-	}
-	
-	/**
-	 * Creates a client with the specified ID
-	 * @param id a string identifier
-	 */
-	public FileClient(String id) {
-		this.id = id;
+		trackerList.add(new TrackerConnection(address, port));
 	}
 	
 	/**
@@ -76,18 +93,53 @@ public class FileClient {
 	}
 	
 	/**
+	 * Returns the list of filenames being transfered in this client
+	 * @return the string identifier
+	 */
+	public Set<String> filenameList() {
+		return filenameList;
+	}
+	
+	/**
+	 * Returns the default tracker list for the client
+	 * @return tracker list
+	 */
+	public List<TrackerConnection> trackerList() {
+		return trackerList;
+	}
+	
+	/**
+	 * Returns pointer to local file in the workspace
+	 * @param filename name of the file
+	 * @return local file
+	 */
+	public File getLocalFile(String filename) {
+		return new File(workingDir + File.separator + filename);
+	}
+	
+	/**
 	 * Adds a file to the list of files, if it is not present
 	 * @param filename name of the file
-	 * @param file path to local file
 	 * @throws IOException
 	 */
-	private void addFile(String filename, File file, Collection<TrackerConnection> trackers) throws IOException {
-		if(!file_list.containsKey(filename)) {
+	public void addFile(String filename, Collection<TrackerConnection> trackers) throws IOException {
+		if(!fileList.containsKey(filename)) {
 			// nope - add a new entry to the list
+			File file = getLocalFile(filename);
 			FileTransfer file_info = new FileTransfer(this, filename, file);
-			file_list.put(filename, file_info);
+			filenameList.add(filename);
+			fileList.put(filename, file_info);
 		}
-		file_list.get(filename).addTrackers(trackers);
+		fileList.get(filename).addTrackers(trackers);
+	}
+	
+	/**
+	 * Adds a file to the list of files, if not present
+	 * @param filename name of the file
+	 * @throws IOException
+	 */
+	public void addFile(String filename) throws IOException {
+		addFile(filename, trackerList);
 	}
 	
 	/**
@@ -97,13 +149,11 @@ public class FileClient {
 	 * @throws IOException 
 	 */
 	public void downloadFile(String filename, Collection<TrackerConnection> trackers) throws IOException {
-		// resolve path to store file into
-		File file = new File(working_dir + File.separator + filename);
 		// add file to list
-		addFile(filename, file, trackers);
+		addFile(filename, trackers);
 		// start download
-		file_list.get(filename).loadMetadataFromPeers();
-		file_list.get(filename).startDownload();
+		fileList.get(filename).loadMetadataFromPeers();
+		fileList.get(filename).startDownload();
 	}
 	
 	/**
@@ -112,7 +162,7 @@ public class FileClient {
 	 * @throws IOException 
 	 */
 	public void downloadFile(String filename) throws IOException {
-		downloadFile(filename, tracker_list);
+		downloadFile(filename, trackerList);
 	}
 	
 	/**
@@ -120,15 +170,12 @@ public class FileClient {
 	 * @param path local path to file to be seeded
 	 * @throws IOException 
 	 */
-	public void seedFile(String path, int block_size, Collection<TrackerConnection> trackers) throws IOException {
-		// initialize stuff
-		File file = new File(path);
-		String filename = file.getName();
+	public void seedFile(String filename, int block_size, Collection<TrackerConnection> trackers) throws IOException {
 		// add file to list
-		addFile(filename, file, trackers);
+		addFile(filename, trackers);
 		// start seeding
-		file_list.get(filename).loadMetadataFromDisk();
-		file_list.get(filename).startSeeder();
+		fileList.get(filename).loadMetadataFromDisk();
+		fileList.get(filename).startSeeder();
 	}
 	
 	/**
@@ -136,16 +183,8 @@ public class FileClient {
 	 * @param path path to file to be seeded
 	 * @throws IOException
 	 */
-	public void seedFile(String path, int block_size) throws IOException {
-		seedFile(path, block_size, tracker_list);
-	}
-	
-	/**
-	 * Changes working directory for this client
-	 * @param path new working directory
-	 */
-	public void setWorkingDirectory(String path) {
-		working_dir = new File(path);
+	public void seedFile(String filename, int block_size) throws IOException {
+		seedFile(filename, block_size, trackerList);
 	}
 	
 	/**
@@ -153,7 +192,60 @@ public class FileClient {
 	 * @return current working directory
 	 */
 	public String workingDirectory() {
-		return working_dir.getAbsolutePath();
+		return workingDir.getAbsolutePath();
+	}
+	
+	/**
+	 * Saves client state in persistent storage
+	 * @param client file client to save
+	 * @throws IOException
+	 */
+	public void saveState() throws IOException {
+		File f = new File(workingDirectory() + File.separator + id() + FILE_EXTENSION);
+		
+		// write transfer states as well
+		for(FileTransfer transfer : fileList.values()) {
+			transfer.saveState();
+		}
+		
+		// create new file if it doesnt exist
+		f.createNewFile();
+		
+		// dump client state into file
+		ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(f));
+		os.writeObject(this);
+		os.close();
+	}
+
+	/**
+	 * Loads client state from persistent storage
+	 * @param workingDir working directory
+	 * @param id client identifier
+	 * @throws IOException
+	 * @throws ClassNotFoundException
+	 */
+	public void loadState() throws IOException, ClassNotFoundException {
+		File f = new File(workingDirectory() + File.separator + id() + FILE_EXTENSION);
+		
+		// load client state from file
+		ObjectInputStream is = new ObjectInputStream(new FileInputStream(f));
+		FileClient client = (FileClient) is.readObject();
+		is.close();
+		
+		// copy attributes
+		trackerList = client.trackerList();
+		filenameList = client.filenameList();
+		
+		// rebuild transient attributes
+		fileList = new HashMap<String, FileTransfer>();
+		for(String filename : client.filenameList()) {
+			addFile(filename);
+		}
+		
+		// resume file transfers
+		for(FileTransfer transfer : fileList.values()) {
+			transfer.loadState();
+		}
 	}
 	
 	/**
@@ -169,7 +261,7 @@ public class FileClient {
 		client += " dir=" + workingDirectory();
 		
 		// get files description
-		Iterator<Entry<String, FileTransfer>> it = file_list.entrySet().iterator();
+		Iterator<Entry<String, FileTransfer>> it = fileList.entrySet().iterator();
 		while(it.hasNext()) {
 			Entry<String, FileTransfer> entry = it.next();
 			files += nl + "- " + entry.getValue();

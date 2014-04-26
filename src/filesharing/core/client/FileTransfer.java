@@ -1,28 +1,44 @@
 package filesharing.core.client;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.RandomAccessFile;
+import java.io.Serializable;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.google.common.io.Files;
+
 import filesharing.core.connection.TrackerConnection;
-import filesharing.exception.BlockNotPresentException;
 import filesharing.exception.NoMetadataException;
 
-public class FileTransfer {
+/**
+ * This represents a file transfer - information about the file (file size,
+ * block size, etc.) and the current state of the file transfer (how many blocks
+ * have been downloaded, if it is currently downloading/seeding)
+ */
+public class FileTransfer implements Serializable {
+	
+	/**
+	 * Extension for metadata files with transfer data
+	 */
+	public static final String FILE_EXTENSION = ".metadata";
 	
 	/**
 	 * Default block size in bytes
 	 */
-	public static final int DEFAULT_BLOCK_SIZE = 1;//(int) (1024*1024*1.4);
+	public static final int DEFAULT_BLOCK_SIZE = 1024*1024;//(int) (1024*1024*1.4);
 	
 	/**
 	 * The client with this file transfer
 	 */
-	private FileClient client;
+	private transient FileClient client;
 	
 	/**
 	 * The filename for this file
@@ -32,17 +48,22 @@ public class FileTransfer {
 	/**
 	 * Where the file is stored in local storage
 	 */
-	private File local_file;
-	
-	/**
-	 * An object for random access to the local file
-	 */
-	private transient RandomAccessFile file_access;
+	private File localFile;
 	
 	/**
 	 * A seeder thread
 	 */
 	private transient FileSeeder seeder = new FileSeeder(this);
+	
+	/**
+	 * Checks if is currently downloading
+	 */
+	private boolean isDownloading = false;
+	
+	/**
+	 * Checks if it is currently seeding
+	 */
+	private boolean isSeeding = false;
 	
 	/**
 	 * A download thread
@@ -52,27 +73,27 @@ public class FileTransfer {
 	/**
 	 * Checks if metadata for the file is loaded
 	 */
-	private boolean has_metadata = false;
+	private boolean hasMetadata = false;
 	
 	/**
 	 * List of trackers to connect
 	 */
-	private Set<TrackerConnection> tracker_list = new HashSet<TrackerConnection>();
+	private Set<TrackerConnection> trackerList = new HashSet<TrackerConnection>();
 	
 	/**
 	 * File metadata: file size (in bytes)
 	 */
-	private long file_size;
+	private long fileSize;
 	
 	/**
 	 * File metadata: file block size (in bytes)
 	 */
-	private int block_size = DEFAULT_BLOCK_SIZE;
+	private int blockSize = DEFAULT_BLOCK_SIZE;
 	
 	/**
 	 * A bitmap to check for blocks present
 	 */
-	private BitSet blocks_present;
+	private BitSet blocksPresent = new BitSet();
 	
 	/**
 	 * Creates a new file transfer
@@ -83,7 +104,7 @@ public class FileTransfer {
 	public FileTransfer(FileClient client, String filename, File local_file) throws IOException {
 		this.client = client;
 		this.filename = filename;
-		this.local_file = local_file;
+		this.localFile = local_file;
 		this.seeder = new FileSeeder(this);
 		this.downloader = new FileDownloader(this);
 	}
@@ -93,7 +114,7 @@ public class FileTransfer {
 	 * @param new_trackers a collection of tracker information objects
 	 */
 	public synchronized void addTrackers(Collection<TrackerConnection> new_trackers) {
-		tracker_list.addAll(new_trackers);
+		trackerList.addAll(new_trackers);
 	}
 	
 	/**
@@ -102,7 +123,7 @@ public class FileTransfer {
 	 * @param port tracker port
 	 */
 	public synchronized void addTracker(String address, int port) {
-		tracker_list.add(new TrackerConnection(address, port));
+		trackerList.add(new TrackerConnection(address, port));
 	}
 	
 	/**
@@ -116,15 +137,11 @@ public class FileTransfer {
 		if(hasMetadata()) return;
 		
 		// we now have metadata
-		has_metadata = true;
+		hasMetadata = true;
 		
 		// initialize metadata
-		this.file_size = file_size;
-		this.block_size = block_size;
-		this.blocks_present = new BitSet(numBlocks());
-		
-		// open file for random access
-		file_access = new RandomAccessFile(local_file, "rws");
+		this.fileSize = file_size;
+		this.blockSize = block_size;
 	}
 	
 	/**
@@ -137,10 +154,10 @@ public class FileTransfer {
 		if(hasMetadata()) return;
 		
 		// create metadata
-		setMetadata(local_file.length(), block_size);
+		setMetadata(localFile.length(), blockSize);
 		
 		// set all blocks as present
-		blocks_present.set(0, numBlocks());
+		blocksPresent.set(0, numBlocks());
 	}
 	
 	/**
@@ -155,8 +172,10 @@ public class FileTransfer {
 		downloader.fetchMetadata();
 		
 		// create file if doesn't exist and allocate disk space
-		local_file.createNewFile();
+		localFile.createNewFile();
+		RandomAccessFile file_access = new RandomAccessFile(localFile, "rws");
 		file_access.setLength(fileSize());
+		file_access.close();
 	}
 	
 	/**
@@ -169,6 +188,7 @@ public class FileTransfer {
 		}
 		
 		// start seeder thread
+		this.isSeeding = true;
 		seeder.start();
 		
 	}
@@ -184,23 +204,62 @@ public class FileTransfer {
 		}
 		
 		// start downloader thread
+		this.isDownloading = true;
 		downloader.start();
 	}
 	
 	/**
-	 * Returns the filename
-	 * @return filename
+	 * Saves file transfer state in persistent storage
+	 * @throws IOException
 	 */
-	public String filename() {
-		return filename;
+	public void saveState() throws IOException {
+		// compute file location
+		File file = new File(localFile.getAbsolutePath() + FILE_EXTENSION);
+		
+		// create new file if it doesnt exist
+		file.createNewFile();
+		
+		// dump file transfer object into file
+		ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(file));
+		os.writeObject(this);
+		os.close();
 	}
-	
+
 	/**
-	 * Check if metadata has been loaded for this file
-	 * @return true if metadata has been loaded, false otherwise
+	 * Loads file transfer state from persistent storage
+	 * @throws IOException
+	 * @throws ClassNotFoundException
 	 */
-	public boolean hasMetadata() {
-		return has_metadata;
+	public void loadState() throws IOException, ClassNotFoundException {
+		// compute file location
+		File file = new File(localFile.getAbsolutePath() + FILE_EXTENSION);
+		
+		// read object from file
+		ObjectInputStream is = new ObjectInputStream(new FileInputStream(file));
+		FileTransfer file_transfer = (FileTransfer) is.readObject();
+		is.close();
+		
+		// rebuild transient variables
+		seeder = new FileSeeder(this);
+		downloader = new FileDownloader(this);
+		
+		// copy state variables
+		isDownloading = file_transfer.isDownloading();
+		isSeeding = file_transfer.isSeeding();
+		hasMetadata = file_transfer.hasMetadata();
+		trackerList = file_transfer.getTrackers();
+		fileSize = file_transfer.fileSize();
+		blockSize = file_transfer.blockSize();
+		blocksPresent = file_transfer.getBlocksPresent();
+		
+		// resume file transfer
+		if(isDownloading()) {
+			downloader.start();
+		}
+		
+		if(isSeeding()) {
+			seeder.start();
+		}
 	}
 	
 	/**
@@ -212,7 +271,7 @@ public class FileTransfer {
 		if(!hasMetadata()) {
 			throw new NoMetadataException("file " + filename() + " has no metadata");
 		}
-		return file_size;
+		return fileSize;
 	}
 	
 	/**
@@ -224,7 +283,7 @@ public class FileTransfer {
 		if(!hasMetadata()) {
 			throw new NoMetadataException("file " + filename() + " has no metadata");
 		}
-		return block_size;
+		return blockSize;
 	}
 
 	/**
@@ -238,10 +297,50 @@ public class FileTransfer {
 		}
 		// compute number of blocks from file size and block size
 		// how many "full" blocks are there?
-		int full_sized_blocks = (int) (fileSize() / blockSize());
+		int num_full_sized_blocks = (int) (fileSize() / blockSize());
 		// check if there is a smaller block in the end
-		int last_block_smaller = ((fileSize()%blockSize() != 0) ? 1 : 0);
-		return full_sized_blocks + last_block_smaller;
+		int num_smaller_blocks = ((fileSize()%blockSize() != 0) ? 1 : 0);
+		return num_full_sized_blocks + num_smaller_blocks;
+	}
+	
+	/**
+	 * Returns the filename
+	 * @return filename
+	 */
+	public String filename() {
+		return filename;
+	}
+	
+	/**
+	 * Returns the local file
+	 * @return file object
+	 */
+	protected File getLocalFile() {
+		return localFile;
+	}
+	
+	/**
+	 * Check if metadata has been loaded for this file
+	 * @return true if metadata has been loaded, false otherwise
+	 */
+	public boolean hasMetadata() {
+		return hasMetadata;
+	}
+	
+	/**
+	 * Check if is currently downloading
+	 * @return true if downloading, false otherwise
+	 */
+	public boolean isDownloading() {
+		return isDownloading;
+	}
+	
+	/**
+	 * Check if is currently seeding
+	 * @return true if seeding, false otherwise
+	 */
+	public boolean isSeeding() {
+		return isSeeding;
 	}
 	
 	/**
@@ -249,7 +348,7 @@ public class FileTransfer {
 	 * @return set of tracker information objects
 	 */
 	protected Set<TrackerConnection> getTrackers() {
-		return tracker_list;
+		return trackerList;
 	}
 	
 	/**
@@ -257,49 +356,7 @@ public class FileTransfer {
 	 * @return a bit set of block indices
 	 */
 	protected BitSet getBlocksPresent() {
-		return blocks_present;
-	}
-	
-	/**
-	 * Reads a block from local storage
-	 * @param index block number (zero-indexed)
-	 * @return a byte array with the block contents
-	 * @throws IOException on read operation failure
-	 */
-	protected synchronized byte[] readBlock(int index) throws IOException {
-		// check if we have the block
-		if(!getBlocksPresent().get(index)) {
-			throw new BlockNotPresentException("dont have block " + index);
-		}
-		
-		// initialize
-		int block_size = (int) ((index==numBlocks()-1) ? (fileSize()%blockSize()) : blockSize());
-		byte[] block = new byte[block_size];
-		
-		// process
-		file_access.seek(blockSize()*index);
-		file_access.read(block);
-		return block;
-	}
-	
-	/**
-	 * Writes a file block to local storage
-	 * @param index block number (zero-indexed)
-	 * @param block the contents of the block
-	 * @throws IOException on write operation failure
-	 */
-	protected synchronized void writeBlock(int index, byte[] block) throws IOException {
-		// check if we have the block
-		if(getBlocksPresent().get(index)) {
-			// ignore it - dont overwrite
-			// should we throw an exception?
-			return;
-		}
-		
-		// process
-		file_access.seek(blockSize()*index);
-		file_access.write(block);
-		blocks_present.set(index);
+		return blocksPresent;
 	}
 	
 	/**
@@ -309,10 +366,12 @@ public class FileTransfer {
 		String metadata;
 		int num_blocks_present = getBlocksPresent().cardinality();
 		if(hasMetadata()) {
-			metadata = "filesize=" + fileSize() + "B, " +
-			           "blocksize=" + blockSize() + ", " +
-			           "numblocks=" + num_blocks_present + "/" + numBlocks() + ", " +
-			           "numTrackers=" + tracker_list.size() + ", " +
+			metadata = "downloading? " + (isDownloading() ? "yes" : "no") + ", " +
+			           "seeding? " + (isSeeding() ? "yes" : "no") + ", " +
+			           "filesize=" + fileSize() + " Bytes, " +
+			           "blocksize=" + blockSize() + " Bytes, " +
+			           "blocks present=" + num_blocks_present + "/" + numBlocks() + ", " +
+			           "numTrackers=" + trackerList.size() + ", " +
 			           "numSeeds=" + downloader.seedList().size();
 		}
 		else {
@@ -327,6 +386,22 @@ public class FileTransfer {
 	 */
 	protected void log(String msg) {
 		client.log("[FILE filename=" + filename + "] " + msg);
+	}
+	
+	/**
+	 * Customize Java built-in serialization process
+	 * Sockets are not serializable - therefore must be transient
+	 * When building back the object, we need to create a new socket
+	 * @param ois object input stream
+	 * @throws ClassNotFoundException
+	 * @throws IOException
+	 */
+	private void readObject(ObjectInputStream ois) throws ClassNotFoundException, IOException {
+		// default deserialization
+		ois.defaultReadObject();
+		this.client = new FileClient(Files.createTempDir().getAbsolutePath());
+		this.seeder = new FileSeeder(this);
+		this.downloader = new FileDownloader(this);
 	}
 	
 }

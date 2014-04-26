@@ -1,6 +1,7 @@
 package filesharing.core.client;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
@@ -20,12 +21,12 @@ import filesharing.message.tracker.response.TrackerErrorResponseMessage;
  * This is spawned by FileSeeder instances
  * Processes requests from a single peer
  */
-public class FileSeeder implements Runnable, TrackerResponseProcessor {
+public class FileSeeder implements Serializable, Runnable, TrackerResponseProcessor {
 
 	/**
 	 * The thread that runs this seeder instance
 	 */
-	Thread runner_thread = new Thread(this);
+	private Thread runnerThread = new Thread(this);
 	
 	/**
 	 * Pool of peer request handler threads
@@ -35,28 +36,28 @@ public class FileSeeder implements Runnable, TrackerResponseProcessor {
 	/**
 	 * File transfer associated with this downloader
 	 */
-	FileTransfer file_transfer;
+	private FileTransfer fileTransfer;
 	
 	/**
 	 * A socket waiting for peer requests
 	 */
-	ServerSocket server_socket;
+	private ServerSocket serverSocket;
 	
 	/**
 	 * Constructor of a file seeder
-	 * @param file_info information of the file to be seeded
+	 * @param file_transfer information of the file to be seeded
 	 * @throws IOException
 	 */
-	public FileSeeder(FileTransfer file_info) throws IOException {
-		this.file_transfer = file_info;
-		server_socket = new ServerSocket(0); // bind to a random port
+	public FileSeeder(FileTransfer file_transfer) throws IOException {
+		this.fileTransfer = file_transfer;
+		serverSocket = new ServerSocket(0); // bind to a random port
 	}
 	
 	/**
 	 * Starts execution of the file seeder in a new thread
 	 */
 	public void start() {
-		runner_thread.start();
+		runnerThread.start();
 	}
 	
 	/**
@@ -64,7 +65,7 @@ public class FileSeeder implements Runnable, TrackerResponseProcessor {
 	 * @return port number
 	 */
 	public int getDataPort() {
-		return server_socket.getLocalPort();
+		return serverSocket.getLocalPort();
 	}
 
 	/**
@@ -72,12 +73,12 @@ public class FileSeeder implements Runnable, TrackerResponseProcessor {
 	 */
 	@Override
 	public void run() {
-		log("Running on port " + server_socket.getLocalPort());
+		log("Running on port " + serverSocket.getLocalPort());
 		
 		// register with trackers
-		for(TrackerConnection tracker : file_transfer.getTrackers()) {
+		for(TrackerConnection tracker : fileTransfer.getTrackers()) {
 			try {
-				TrackerRequestMessage msg = new RegisterPeerRequestMessage(file_transfer.filename(), getDataPort());
+				TrackerRequestMessage msg = new RegisterPeerRequestMessage(fileTransfer.filename(), getDataPort());
 				tracker.sendMessage(msg, this);
 			} catch (IOException | RequestFailedException e) {
 				log("failed to register with " + tracker);
@@ -88,10 +89,10 @@ public class FileSeeder implements Runnable, TrackerResponseProcessor {
 		while(true) {
 		try {
 				// accept incomming connections
-				Socket client_socket = server_socket.accept();
+				Socket client_socket = serverSocket.accept();
 				log("new connection from " + client_socket.getRemoteSocketAddress());
 				// create a new connection handler and run in a separate thread
-				FileSeederThread handler = new FileSeederThread(file_transfer, client_socket);
+				FileSeederThread handler = new FileSeederThread(fileTransfer, client_socket);
 				executor.execute(handler);
 			} catch (IOException e) {
 				log("Problem accepting a connection. " + e.getMessage());
@@ -100,7 +101,7 @@ public class FileSeeder implements Runnable, TrackerResponseProcessor {
 	}
 	
 	protected void log(String msg) {
-		file_transfer.log("[SEED] " + msg);
+		fileTransfer.log("[SEED] " + msg);
 	}
 
 	@Override

@@ -3,10 +3,12 @@ package filesharing.core.client;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.RandomAccessFile;
 import java.net.Socket;
 import java.util.BitSet;
 
 import filesharing.core.processor.PeerRequestProcessor;
+import filesharing.exception.BlockNotPresentException;
 import filesharing.message.peer.request.BlocksPresentRequestMessage;
 import filesharing.message.peer.request.FileBlockRequestMessage;
 import filesharing.message.peer.request.FileMetadataRequestMessage;
@@ -17,12 +19,21 @@ import filesharing.message.peer.response.FileMetadataResponseMessage;
 import filesharing.message.peer.response.PeerErrorResponseMessage;
 import filesharing.message.tracker.response.TrackerErrorResponseMessage;
 
+/**
+ * This is a seeder thread, a slave for FileSeeder. It processes requests from
+ * a single client.
+ */
 public class FileSeederThread implements Runnable, PeerRequestProcessor {
 		
 	/**
 	 * The file information for this handler
 	 */
-	FileTransfer file_transfer;
+	FileTransfer fileTransfer;
+	
+	/**
+	 * An object for random access to the local file
+	 */
+	private RandomAccessFile fileAccess;
 	
 	/**
 	 * Client socket to wait for requests
@@ -37,10 +48,38 @@ public class FileSeederThread implements Runnable, PeerRequestProcessor {
 	 * @throws IOException 
 	 */
 	public FileSeederThread(FileTransfer file_transfer, Socket sock) throws IOException {
-		this.file_transfer = file_transfer;
+		this.fileTransfer = file_transfer;
 		this.sock = sock;
 		this.is = new ObjectInputStream(sock.getInputStream());
 		this.os = new ObjectOutputStream(sock.getOutputStream());
+		fileAccess = new RandomAccessFile(file_transfer.getLocalFile(), "r");
+	}
+	
+	/**
+	 * Reads a block from the local file
+	 * @param index block number (zero-indexed)
+	 * @return a byte array with the block contents
+	 * @throws IOException on read operation failure
+	 */
+	protected synchronized byte[] readBlock(int index) throws IOException {
+		// check if we have the block
+		if(!fileTransfer.getBlocksPresent().get(index)) {
+			throw new BlockNotPresentException("dont have block " + index);
+		}
+		
+		// initialize
+		// the last block's size may be different. if this is the last block, its
+		// size is the division remainder between filesize%blocksize
+		int num_blocks = fileTransfer.numBlocks();
+		int file_size = (int) fileTransfer.fileSize();
+		int block_size = fileTransfer.blockSize();
+		int size = ((index==num_blocks-1) ? (file_size%block_size) : block_size);
+		byte[] block = new byte[size];
+		
+		// process
+		this.fileAccess.seek(block_size*index); // move file pointer
+		fileAccess.read(block); // read
+		return block;
 	}
 
 	/**
@@ -64,11 +103,11 @@ public class FileSeederThread implements Runnable, PeerRequestProcessor {
 	}
 	
 	public FileTransfer fileTransfer() {
-		return file_transfer;
+		return fileTransfer;
 	}
 	
 	protected void log (String msg) {
-		file_transfer.log("[SEED] " + sock.getRemoteSocketAddress() + ": " + msg);
+		fileTransfer.log("[SEED] " + sock.getRemoteSocketAddress() + ": " + msg);
 	}
 
 	/**
@@ -105,7 +144,7 @@ public class FileSeederThread implements Runnable, PeerRequestProcessor {
 		// process request
 		byte[] block;
 		try {
-			block = file_transfer.readBlock(msg.blockNumber());
+			block = readBlock(msg.blockNumber());
 		}
 		catch (IOException e) {
 			os.writeObject(new PeerErrorResponseMessage("error reading file block, sorry"));

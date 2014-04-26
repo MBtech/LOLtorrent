@@ -8,7 +8,8 @@ import filesharing.message.tracker.request.TrackerRequestMessage;
 import filesharing.message.tracker.response.TrackerResponseMessage;
 
 /**
- * Represents information to connect to a tracker
+ * This is a connection handler for tracker connections
+ * Extends connection handler with the capability of making requests to trackers
  */
 public class TrackerConnection extends ConnectionHandler {
 	

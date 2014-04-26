@@ -14,45 +14,63 @@ import filesharing.core.tracker.TrackerDaemon;
  */
 public class Testing {
 	
-	public static void main (String [] args) throws IOException, InterruptedException {
+	public static void main (String [] args) throws IOException, InterruptedException, ClassNotFoundException {
 		
 		// spawn a tracker
-		TrackerDaemon t = new TrackerDaemon();
+		TrackerDaemon t = new TrackerDaemon("T");
+		t.setWorkingDirectory("/tmp/t"); // XXX
 		t.start();
 		
 		// client 0 seeds file
-		FileClient c0 = new FileClient("0");
-		c0.setWorkingDirectory("/tmp/c1"); // XXX
+		FileClient c0 = new FileClient("/tmp/c1", "0"); // XXX
 		c0.addTracker("localhost", TrackerDaemon.DEFAULT_TRACKER_PORT);
-		c0.seedFile("/tmp/c1/irs.txt", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
+		c0.seedFile("irs.txt", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
 		
 		// client 1 seeds file
-		FileClient c1 = new FileClient("1");
-		c1.setWorkingDirectory("/tmp/c1"); // XXX
+		FileClient c1 = new FileClient("/tmp/c1", "1"); // XXX
 		c1.addTracker("localhost", TrackerDaemon.DEFAULT_TRACKER_PORT);
-		c1.seedFile("/tmp/c1/irs.txt", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
+		c1.seedFile("irs.txt", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
 		
 		// must wait a bit - seedFile method calls are asynchronous
-		Thread.sleep(500);
+		Thread.sleep(1000);
 		
 		// client 2 downloads the file from client 1
-		FileClient c2 = new FileClient("2");
-		c2.setWorkingDirectory("/tmp/c2"); // XXX
+		FileClient c2 = new FileClient("/tmp/c2", "2"); // XXX
 		c2.addTracker("localhost", TrackerDaemon.DEFAULT_TRACKER_PORT);
 		c2.downloadFile("irs.txt"); // XXX
-
-		// print information every second
-		for(int i=0; i<=2; i++) {
-//			System.out.println("");
-//			System.out.println("@@ << t = " + i + " seconds >> @@");
-//			System.out.println(c0);
-//			System.out.println(c1);
-//			System.out.println(c2);
-//			System.out.println("");
-			Thread.sleep(1000);
+		try {
+			System.out.println();
+			System.out.println("C2");
+			System.out.println(c2);
+			System.out.println();
+			
+			c2.saveState();
+			FileClient c3 = new FileClient("/tmp/c2", "2");
+			c3.loadState();
+			
+			System.out.println();
+			System.out.println("C2 copy");
+			System.out.println(c3);
+			System.out.println();
 		}
-		
-		// force quit of the application
+		catch (Exception e) {
+			e.printStackTrace();
+			System.out.println(e.getMessage());
+		}
+
+//		// print information every second
+//		for(int i=0; i<=2; i++) {
+////			System.out.println("");
+////			System.out.println("@@ << t = " + i + " seconds >> @@");
+////			System.out.println(c0);
+////			System.out.println(c1);
+////			System.out.println(c2);
+////			System.out.println("");
+//			Thread.sleep(1000);
+//		}
+//		
+//		// force quit of the application
+		Thread.sleep(100);
 		System.exit(0);
 		
 	}

@@ -17,6 +17,10 @@ import filesharing.message.peer.response.FileBlockResponseMessage;
 import filesharing.message.peer.response.FileMetadataResponseMessage;
 import filesharing.message.peer.response.PeerErrorResponseMessage;
 
+/**
+ * This is a downloader thread. It is a slave of FileDownloader. Connects to a
+ * single seeder, performing requests and processing responses.
+ */
 public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 	
 	/**
@@ -27,12 +31,12 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 	/**
 	 * The peer to connect to and make requests
 	 */
-	private PeerConnection peer_information;
+	private PeerConnection peerConnection;
 	
 	/**
 	 * Set of blocks present in the peer
 	 */
-	private BitSet peer_blocks_present = new BitSet();
+	private BitSet peerBlocks = new BitSet();
 	
 	/**
 	 * Constructs a new downloader thread
@@ -41,7 +45,7 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 	 */
 	public FileDownloaderThread(FileDownloader downloader, PeerConnection peer_information) {
 		this.downloader = downloader;
-		this.peer_information = peer_information;
+		this.peerConnection = peer_information;
 	}
 	
 	/**
@@ -49,7 +53,7 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 	 * @return blocks present in remote peer
 	 */
 	protected BitSet getPeerBlocksPresent() {
-		return peer_blocks_present;
+		return peerBlocks;
 	}
 	
 	/**
@@ -60,7 +64,7 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 	protected void requestMetadata() throws IOException, ClassNotFoundException {
 		String filename = downloader.getFileTransfer().filename();
 		PeerRequestMessage msg = new FileMetadataRequestMessage(filename);
-		peer_information.sendMessage(msg, this);
+		peerConnection.sendMessage(msg, this);
 	}
 
 	/**
@@ -75,14 +79,14 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 			
 			// request the blocks the peer has
 			msg = new BlocksPresentRequestMessage(filename);
-			peer_information.sendMessage(msg, this);
+			peerConnection.sendMessage(msg, this);
 			
 			// download the blocks
 			while(true) {
 				try {
 					int block_index = downloader.getBlockIndexForDownload(this);
 					msg = new FileBlockRequestMessage(filename, block_index);
-					peer_information.sendMessage(msg, this);
+					peerConnection.sendMessage(msg, this);
 				}
 				catch(DownloadCompleteException e) {
 					// download is complete, our work here is done
@@ -93,7 +97,7 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 					// peer has no new blocks
 					// request which blocks peer has again and try again
 					msg = new FileMetadataRequestMessage(filename);
-					peer_information.sendMessage(msg, this);
+					peerConnection.sendMessage(msg, this);
 					continue;
 				}
 			}
@@ -126,7 +130,7 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 	 */
 	@Override
 	public void processBlocksPresentResponseMessage(BlocksPresentResponseMessage msg) {
-		this.peer_blocks_present = msg.blocksPresent();
+		this.peerBlocks = msg.blocksPresent();
 	}
 
 	/**
@@ -134,7 +138,7 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 	 */
 	@Override
 	public void processFileBlockResponseMessage(FileBlockResponseMessage msg) throws IOException {
-		downloader.getFileTransfer().writeBlock(msg.blockIndex(), msg.block());
+		downloader.writeBlock(msg.blockIndex(), msg.block());
 	}
 
 }

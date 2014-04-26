@@ -6,6 +6,9 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.Socket;
 
+/**
+ * This is a connection handler - handles connectivity for a single socket
+ */
 public abstract class ConnectionHandler implements Serializable {
 
 	/**
