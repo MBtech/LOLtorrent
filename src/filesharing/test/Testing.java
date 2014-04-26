@@ -18,12 +18,9 @@ public class Testing {
 	public static void main (String [] args) throws IOException, InterruptedException, ClassNotFoundException {
 		
 		// spawn a tracker
-		TrackerDaemon t = new TrackerDaemon("/tmp/t", "T"); // XXX
+		TrackerDaemon t = new TrackerDaemon("/tmp/t", "T1"); // XXX
 		t.start();
 		System.out.println(t);
-		
-		// must wait a bit - seedFile method calls are asynchronous
-		Thread.sleep(2000);
 		
 		// seeder 1 seeds file
 		FileClient s1 = new FileClient("/tmp/c1", "S1"); // XXX
