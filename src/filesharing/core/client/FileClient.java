@@ -136,6 +136,7 @@ public class FileClient implements Serializable {
 			fileList.put(filename, file_info);
 		}
 		fileList.get(filename).addTrackers(trackers);
+		saveState();
 	}
 	
 	/**
