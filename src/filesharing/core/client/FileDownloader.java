@@ -33,7 +33,12 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	/**
 	 * Delay between asking tracker for new peers
 	 */
-	public static final int TRACKER_QUERY_DELAY = 1000; // 30 seconds
+	public static final int TRACKER_QUERY_DELAY = 1; // seconds
+	
+	/**
+	 * Delay between asking tracker for new peers
+	 */
+	public static final int SAVE_STATE_DELAY = 1; // seconds
 	
 	/**
 	 * Downloader thread
@@ -48,7 +53,7 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	/**
 	 * Pool of scheduled/periodic tasks
 	 */
-	private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+	private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
 	
 	/**
 	 * File transfer associated with this downloader
@@ -64,6 +69,12 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	 * Set of blocks assigned for downloading
 	 */
 	private BitSet blocksForDownload;
+	
+	/**
+	 * Checks if file transfer state is dirty
+	 * Only blocks are counted - peer lists are not saved
+	 */
+	private boolean dirtyState = false;
 	
 	/**
 	 * List of seeders
@@ -112,8 +123,7 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	protected synchronized void writeBlock(int index, byte[] block) throws IOException {
 		// check if we have the block
 		if(fileTransfer.getBlocksPresent().get(index)) {
-			// ignore it - dont overwrite
-			// should we throw an exception?
+			// we do - then ignore this write request - dont overwrite
 			return;
 		}
 		
@@ -121,6 +131,14 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 		fileAccess.seek(fileTransfer.blockSize() * index);
 		fileAccess.write(block);
 		fileTransfer.getBlocksPresent().set(index);
+		this.dirtyState = true;
+		
+		// check if this is the last block
+		if(fileTransfer.haveAllBlocks()) {
+			log("Download complete");
+			stop();
+		}
+		
 	}
 	
 	/**
@@ -133,7 +151,7 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 		BitSet peer_blocks = peer.getPeerBlocksPresent();
 		
 		// check if we already have all the blocks
-		if(local_blocks.cardinality() == fileTransfer.numBlocks()) {
+		if(fileTransfer.haveAllBlocks()) {
 			throw new DownloadCompleteException("download of file " + filename + " is finished");
 		}
 		
@@ -222,28 +240,52 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	@Override
 	public void run() {
 		try {
+			// dont run if we already have all the blocks
+			if(fileTransfer.haveAllBlocks()) {
+				log("Aborting download order - already have file");
+				stop();
+				return;
+			}
+			
 			// initialize
 			blocksForDownload = new BitSet(fileTransfer.numBlocks());
 			this.fileAccess = new RandomAccessFile(fileTransfer.getLocalFile(), "rws");
 			
-			final FileDownloader downloader = this;
+			// update the peer list of peers
+			updatePeerList();
+			
 			
 			// setup periodic tasks
+			final FileDownloader downloader = this;
 			// update peer lists regularly
 			Runnable periodicPeerListUpdateTask = new Runnable() {
 				@Override public void run() {
-					downloader.log("Updating peer list");
+					downloader.log("Periodic peer list update: Updating peer list");
 					downloader.updatePeerList();
 				}
 			};
-			this.scheduler.scheduleAtFixedRate(periodicPeerListUpdateTask, 0, TRACKER_QUERY_DELAY, TimeUnit.SECONDS);
+			// save transfer state regularly
+			Runnable periodicStateSavingTask = new Runnable() {
+				@Override public void run() {
+					if(downloader.dirtyState) {
+						try {
+							downloader.log("Periodic saving task: committed " + fileTransfer.numBlocksPresent() + " blocks");
+							fileTransfer.saveState();
+						} catch (IOException e) {
+							downloader.log("Periodic saving task: error saving state");
+						}
+					}
+				}
+			};
+			scheduler.scheduleAtFixedRate(periodicPeerListUpdateTask, 0, TRACKER_QUERY_DELAY, TimeUnit.SECONDS);
+			scheduler.scheduleAtFixedRate(periodicStateSavingTask, 0, SAVE_STATE_DELAY, TimeUnit.SECONDS);
 			
 			// start a downloader thread for every peer
 			for(PeerConnection peer_info : seedList()) {
 				executor.execute(new FileDownloaderThread(this, peer_info));
 			}
 		}
-		catch(FileNotFoundException e) {
+		catch(IOException e) {
 			// something weird happened
 			log("Error starting downloader - local file not found");
 		}
@@ -256,6 +298,17 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 		if(!runnerThread.isAlive()) {
 			runnerThread.start();
 		}
+	}
+	
+	/**
+	 * Stops downloading, eventually
+	 * @throws IOException 
+	 */
+	public void stop() throws IOException {
+		log("Stopping");
+		fileTransfer.setDownloadingFlag(false);
+		scheduler.shutdown();
+		fileTransfer.saveState();
 	}
 	
 	/**

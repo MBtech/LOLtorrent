@@ -33,7 +33,7 @@ public class FileTransfer implements Serializable {
 	/**
 	 * Default block size in bytes
 	 */
-	public static final int DEFAULT_BLOCK_SIZE = 1024;//(int) (1024*1024*1.4);
+	public static final int DEFAULT_BLOCK_SIZE = 1024;
 	
 	/**
 	 * The client with this file transfer
@@ -107,6 +107,15 @@ public class FileTransfer implements Serializable {
 		this.localFile = local_file;
 		this.seeder = new FileSeeder(this);
 		this.downloader = new FileDownloader(this);
+		
+		// load state, if it exists
+		try {
+			this.loadState();
+			log("Loaded existing transfer data");
+		}
+		catch (Exception e) {
+			// nope, no state... dont load then
+		}
 	}
 	
 	/**
@@ -267,6 +276,7 @@ public class FileTransfer implements Serializable {
 			downloader.start();
 		}
 		
+		// resume file seeding
 		if(isSeeding()) {
 			seeder.start();
 		}
@@ -314,6 +324,14 @@ public class FileTransfer implements Serializable {
 	}
 	
 	/**
+	 * Returns the number of blocks present
+	 * @return number of blocks
+	 */
+	public int numBlocksPresent() {
+		return this.getBlocksPresent().cardinality();
+	}
+	
+	/**
 	 * Returns the filename
 	 * @return filename
 	 */
@@ -346,11 +364,27 @@ public class FileTransfer implements Serializable {
 	}
 	
 	/**
+	 * Sets the value for the isDownloading flag
+	 * @param isDownloading true if downloading, false otherwise
+	 */
+	protected void setDownloadingFlag(boolean isDownloading) {
+		this.isDownloading = isDownloading;
+	}
+	
+	/**
+	 * Sets the value for the isSeeding flag
+	 * @param isSeeding true if seeding, false otherwise
+	 */
+	protected void setSeedingFlag(boolean isSeeding) {
+		this.isSeeding = isSeeding;
+	}
+	
+	/**
 	 * Check if we have all the blocks of the file
 	 * @return true if file complete, false otherwise
 	 */
 	public boolean haveAllBlocks() {
-		return numBlocks() == getBlocksPresent().cardinality();
+		return numBlocks() == numBlocksPresent();
 	}
 	
 	/**
@@ -382,13 +416,12 @@ public class FileTransfer implements Serializable {
 	 */
 	public String toString() {
 		String metadata;
-		int num_blocks_present = getBlocksPresent().cardinality();
 		if(hasMetadata()) {
 			metadata = "downloading? " + (isDownloading() ? "yes" : "no") + ", " +
 			           "seeding? " + (isSeeding() ? "yes" : "no") + ", " +
 			           "filesize=" + fileSize() + " Bytes, " +
 			           "blocksize=" + blockSize() + " Bytes, " +
-			           "blocks=" + num_blocks_present + "/" + numBlocks() + ", " +
+			           "blocks=" + numBlocksPresent() + "/" + numBlocks() + ", " +
 			           "numTrackers=" + trackerList.size() + ", " +
 			           "numPeers=" + downloader.seedList().size();
 		}

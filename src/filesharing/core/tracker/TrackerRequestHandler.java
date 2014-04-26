@@ -6,8 +6,8 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.TreeSet;
 
 import filesharing.core.connection.PeerConnection;
 import filesharing.core.processor.TrackerRequestProcessor;
@@ -112,7 +112,7 @@ public class TrackerRequestHandler implements Runnable, TrackerRequestProcessor 
 		// check if this file has not been registered yet
 		if(!tracker.peerRecord().containsKey(filename)) {
 			// if not, create a new set to store peers for that file
-			tracker.peerRecord().put(filename, Collections.synchronizedSet(new HashSet<PeerConnection>()));
+			tracker.peerRecord().put(filename, Collections.synchronizedSet(new TreeSet<PeerConnection>()));
 		}
 		// add the peer to the list of peers for the given filename
 		Set<PeerConnection> peer_list = tracker.peerRecord().get(filename);

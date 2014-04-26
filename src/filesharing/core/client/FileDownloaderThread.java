@@ -82,7 +82,7 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 			peerConnection.sendMessage(msg, this);
 			
 			// download the blocks
-			while(!downloader.getFileTransfer().haveAllBlocks()) {
+			while(downloader.getFileTransfer().isDownloading()) {
 				try {
 					int block_index = downloader.getBlockIndexForDownload(this);
 					msg = new FileBlockRequestMessage(filename, block_index);
@@ -90,7 +90,6 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 				}
 				catch(DownloadCompleteException e) {
 					// download is complete, our work here is done
-					downloader.log("download complete! thread exiting!");
 					break;
 				}
 				catch(NoNewBlocksForDownloadException e) {
@@ -103,7 +102,6 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 			}
 		} catch (IOException e) {
 			// something really bad happened
-			//e.printStackTrace();
 			downloader.log(e.getMessage());
 		}
 	}
