@@ -1,7 +1,12 @@
 package filesharing.core.tracker;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Hashtable;
@@ -19,7 +24,12 @@ import filesharing.core.connection.PeerConnection;
  * This represents a tracker instance - stores lists of files and lists of peers
  * for each of the files
  */
-public class TrackerDaemon implements Runnable {
+public class TrackerDaemon implements Runnable, Serializable {
+	
+	/**
+	 * Extension for files storing tracker state
+	 */
+	public static final String FILE_EXTENSION = ".tracker";
 	
 	/**
 	 * Default tracker listen port
@@ -39,31 +49,41 @@ public class TrackerDaemon implements Runnable {
 	/**
 	 * The thread that runs this tracker instance
 	 */
-	private Thread trackerThread = new Thread(this);
+	private transient Thread trackerThread = new Thread(this);
 	
 	/**
 	 * A pool of tracker request handler threads
 	 */
-	private ExecutorService executor = Executors.newCachedThreadPool();
+	private transient ExecutorService executor = Executors.newCachedThreadPool();
 	
 	/**
 	 * Tracker listen socket
 	 */
-	private ServerSocket serverSocket;
+	private transient ServerSocket serverSocket;
 	
 	/**
 	 * Contains a list of peers for each file
 	 */
-	static Hashtable<String,Set<PeerConnection>> peerRecord = new Hashtable<String,Set<PeerConnection>>();
+	private Hashtable<String,Set<PeerConnection>> peerRecord = new Hashtable<String,Set<PeerConnection>>();
 	
 	/**
 	 * Setup a tracker in user defined port
 	 * @param port tracker listen port
 	 * @throws IOException
 	 */
-	public TrackerDaemon(String id, int port) throws IOException {
+	public TrackerDaemon(String working_dir, String id, int port) throws IOException {
+		this.workingDir = new File(working_dir);
 		this.serverSocket = new ServerSocket(port);
 		this.id = id;
+
+		// load state, if it exists
+		try {
+			loadState();
+			log("Loaded existing tracker data");
+		}
+		catch (Exception e) {
+			// nope, no state... dont load then
+		}
 	}
 	
 	/**
@@ -71,8 +91,8 @@ public class TrackerDaemon implements Runnable {
 	 * @param id tracker identifier
 	 * @throws IOException
 	 */
-	public TrackerDaemon(String id) throws IOException {
-		this(id, DEFAULT_TRACKER_PORT);
+	public TrackerDaemon(String working_dir, String id) throws IOException {
+		this(working_dir, id, DEFAULT_TRACKER_PORT);
 	}
 	
 	/**
@@ -80,16 +100,16 @@ public class TrackerDaemon implements Runnable {
 	 * @param port tracker listen port
 	 * @throws IOException
 	 */
-	public TrackerDaemon(int port) throws IOException {
-		this(RandomStringUtils.randomAlphabetic(5), port);
+	public TrackerDaemon(String working_dir, int port) throws IOException {
+		this(working_dir, RandomStringUtils.randomAlphabetic(5), port);
 	}
 	
 	/**
 	 * Creates a tracker with a random ID in the default port
 	 * @throws IOException
 	 */
-	public TrackerDaemon() throws IOException {
-		this(RandomStringUtils.randomAlphabetic(5), DEFAULT_TRACKER_PORT);
+	public TrackerDaemon(String working_dir) throws IOException {
+		this(working_dir, RandomStringUtils.randomAlphabetic(5), DEFAULT_TRACKER_PORT);
 	}
 	
 	/**
@@ -109,19 +129,45 @@ public class TrackerDaemon implements Runnable {
 	}
 	
 	/**
-	 * Changes working directory for this client
-	 * @param path new working directory
-	 */
-	public void setWorkingDirectory(String path) {
-		workingDir = new File(path);
-	}
-	
-	/**
 	 * Returns the working directory for this client
 	 * @return current working directory
 	 */
 	public String workingDirectory() {
 		return workingDir.getAbsolutePath();
+	}
+	
+	/**
+	 * Saves client state in persistent storage
+	 * @throws IOException
+	 */
+	public void saveState() throws IOException {
+		File f = new File(workingDirectory() + File.separator + id() + FILE_EXTENSION);
+		
+		// create new file if it doesnt exist
+		f.createNewFile();
+		
+		// dump client state into file
+		ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(f));
+		os.writeObject(this);
+		os.close();
+	}
+
+	/**
+	 * Loads client state from persistent storage
+	 * @throws IOException
+	 * @throws ClassNotFoundException
+	 */
+	public void loadState() throws IOException, ClassNotFoundException {
+		File f = new File(workingDirectory() + File.separator + id() + FILE_EXTENSION);
+		
+		// load client state from file
+		ObjectInputStream is = new ObjectInputStream(new FileInputStream(f));
+		TrackerDaemon client = (TrackerDaemon) is.readObject();
+		is.close();
+		
+		// copy attributes
+		this.peerRecord = client.peerRecord();
+		
 	}
 
 	/**
@@ -156,6 +202,13 @@ public class TrackerDaemon implements Runnable {
 	 */
 	protected void log(String msg) {
 		System.out.println("[TRACKER id=" + id() + "] " + msg);
+	}
+	
+	/**
+	 * Returns a text representation of the object
+	 */
+	public String toString() {
+		return "[TRACKER]" + peerRecord;
 	}
 	
 }

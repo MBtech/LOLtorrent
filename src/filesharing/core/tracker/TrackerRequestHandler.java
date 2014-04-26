@@ -71,9 +71,9 @@ public class TrackerRequestHandler implements Runnable, TrackerRequestProcessor 
 			}
 		}
 		catch (IOException | ClassNotFoundException e) {
-			log(e.toString());
+			log("Exception while accepting connection: " + e.toString());
+			e.printStackTrace();
 			// just exit silently
-			//log(sock.getRemoteSocketAddress() + ": disconnected");
 		}
 	}
 
@@ -117,6 +117,9 @@ public class TrackerRequestHandler implements Runnable, TrackerRequestProcessor 
 		// add the peer to the list of peers for the given filename
 		Set<PeerConnection> peer_list = tracker.peerRecord().get(filename);
 		peer_list.add(new PeerConnection(sock.getInetAddress().getHostAddress(), data_port));
+		
+		// save tracker state
+		tracker.saveState();
 		
 		// send response to client
 		os.writeObject(new SuccessResponseMessage());

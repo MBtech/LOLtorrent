@@ -56,19 +56,28 @@ public class FileClient implements Serializable {
 	private Set<String> filenameList = new TreeSet<String>();
 	
 	/**
-	 * Creates a client with a random ID
-	 */
-	public FileClient(String working_dir) {
-		this(working_dir, RandomStringUtils.randomAlphabetic(5));
-	}
-	
-	/**
 	 * Creates a client with the specified ID
 	 * @param id a string identifier
 	 */
 	public FileClient(String working_dir, String id) {
 		this.id = id;
 		this.workingDir = new File(working_dir);
+		
+		// load state, if it exists
+		try {
+			loadState();
+			log("Loaded existing client data");
+		}
+		catch (Exception e) {
+			// nope, no state... dont load then
+		}
+	}
+	
+	/**
+	 * Creates a client with a random ID
+	 */
+	public FileClient(String working_dir) {
+		this(working_dir, RandomStringUtils.randomAlphabetic(5));
 	}
 	
 	/**

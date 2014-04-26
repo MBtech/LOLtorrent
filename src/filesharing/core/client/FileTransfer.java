@@ -110,7 +110,7 @@ public class FileTransfer implements Serializable {
 		
 		// load state, if it exists
 		try {
-			this.loadState();
+			loadState();
 			log("Loaded existing transfer data");
 		}
 		catch (Exception e) {
