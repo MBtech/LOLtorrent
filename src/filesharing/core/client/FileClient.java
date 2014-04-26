@@ -163,7 +163,9 @@ public class FileClient implements Serializable {
 	
 	/**
 	 * Add file for seeding in specified list of trackers
-	 * @param path local path to file to be seeded
+	 * @param filename name of the file to be seeded
+	 * @param block_size size of the file blocks to be used
+	 * @param trackers list of trackers
 	 * @throws IOException 
 	 */
 	public void seedFile(String filename, int block_size, Set<TrackerConnection> trackers) throws IOException {
@@ -176,7 +178,8 @@ public class FileClient implements Serializable {
 	
 	/**
 	 * Add file for seeding with default tracker list
-	 * @param path path to file to be seeded
+	 * @param filename name of the file to be seeded
+	 * @param block_size size of the file blocks to be used
 	 * @throws IOException
 	 */
 	public void seedFile(String filename, int block_size) throws IOException {
@@ -193,7 +196,6 @@ public class FileClient implements Serializable {
 	
 	/**
 	 * Saves client state in persistent storage
-	 * @param client file client to save
 	 * @throws IOException
 	 */
 	public void saveState() throws IOException {
@@ -215,8 +217,6 @@ public class FileClient implements Serializable {
 
 	/**
 	 * Loads client state from persistent storage
-	 * @param workingDir working directory
-	 * @param id client identifier
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */

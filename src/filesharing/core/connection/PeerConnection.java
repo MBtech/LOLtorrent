@@ -16,7 +16,7 @@ public class PeerConnection extends ConnectionHandler {
 	/**
 	 * Constructs a new peer information
 	 * @param host peer address
-	 * @param data_port peer data port
+	 * @param port peer data port
 	 */
 	public PeerConnection(String host, int port) {
 		super(host, port);
@@ -25,7 +25,7 @@ public class PeerConnection extends ConnectionHandler {
 	/**
 	 * Synchronously send a message to the peer
 	 * @param msg request message
-	 * @param proc response processor
+	 * @param processor response processor
 	 * @throws IOException on communication failure
 	 */
 	public synchronized void sendMessage(PeerRequestMessage msg, PeerResponseProcessor processor) throws IOException {
