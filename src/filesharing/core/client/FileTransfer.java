@@ -33,7 +33,7 @@ public class FileTransfer implements Serializable {
 	/**
 	 * Default block size in bytes
 	 */
-	public static final int DEFAULT_BLOCK_SIZE = 1024*1024;//(int) (1024*1024*1.4);
+	public static final int DEFAULT_BLOCK_SIZE = 1;//(int) (1024*1024*1.4);
 	
 	/**
 	 * The client with this file transfer
@@ -187,6 +187,11 @@ public class FileTransfer implements Serializable {
 			throw new NoMetadataException("file " + filename() + " has no metadata");
 		}
 		
+		// check if already seeding
+		if(isSeeding()) {
+			return;
+		}
+		
 		// start seeder thread
 		this.isSeeding = true;
 		seeder.start();
@@ -201,6 +206,11 @@ public class FileTransfer implements Serializable {
 		// check if metadata is present
 		if(!hasMetadata()) {
 			throw new NoMetadataException("file " + filename() + " has no metadata");
+		}
+		
+		// check if already downloading
+		if(isDownloading()) {
+			return;
 		}
 		
 		// start downloader thread
@@ -333,6 +343,14 @@ public class FileTransfer implements Serializable {
 	 */
 	public boolean isDownloading() {
 		return isDownloading;
+	}
+	
+	/**
+	 * Check if we have all the blocks of the file
+	 * @return true if file complete, false otherwise
+	 */
+	public boolean haveAllBlocks() {
+		return numBlocks() == getBlocksPresent().cardinality();
 	}
 	
 	/**

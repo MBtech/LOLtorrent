@@ -26,7 +26,7 @@ import filesharing.message.tracker.response.TrackerErrorResponseMessage;
  * File metadata and content downloader - makes requests to peers and handles
  * responses
  */
-public class FileDownloader implements Serializable, Runnable, TrackerResponseProcessor {
+public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	
 	/**
 	 * Downloader thread
@@ -65,13 +65,6 @@ public class FileDownloader implements Serializable, Runnable, TrackerResponsePr
 	 */
 	public FileDownloader(FileTransfer file_transfer) throws FileNotFoundException {
 		this.fileTransfer = file_transfer;
-	}
-	
-	/**
-	 * Starts execution of the file downloader in a new thread
-	 */
-	public void start() {
-		runnerThread.start();
 	}
 	
 	/**
@@ -210,14 +203,6 @@ public class FileDownloader implements Serializable, Runnable, TrackerResponsePr
 			throw new NoMetadataException("all the peers were mean to me: could not fetch metadata");
 		}
 	}
-	
-	/**
-	 * Logs a message to console
-	 * @param msg message to log
-	 */
-	protected void log(String msg) {
-		fileTransfer.log("[DOWN] " + msg);
-	}
 
 	/**
 	 * Starts the downloading of the file
@@ -240,6 +225,22 @@ public class FileDownloader implements Serializable, Runnable, TrackerResponsePr
 			// something weird happened
 			log("Error starting downloader - local file not found");
 		}
+	}
+	
+	/**
+	 * Starts execution of the file downloader in a new thread
+	 */
+	public void start() {
+		System.out.println("DOWNLOADER STARTING");
+		runnerThread.start();
+	}
+	
+	/**
+	 * Logs a message to console
+	 * @param msg message to log
+	 */
+	protected void log(String msg) {
+		fileTransfer.log("[DOWN] " + msg);
 	}
 	
 	/**

@@ -82,7 +82,7 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 			peerConnection.sendMessage(msg, this);
 			
 			// download the blocks
-			while(true) {
+			while(!downloader.getFileTransfer().haveAllBlocks()) {
 				try {
 					int block_index = downloader.getBlockIndexForDownload(this);
 					msg = new FileBlockRequestMessage(filename, block_index);
