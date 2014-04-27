@@ -80,9 +80,8 @@ public class TrackerDaemon implements Runnable, Serializable {
 		try {
 			loadState();
 			log("Loaded existing tracker data");
-		}
-		catch (Exception e) {
-			// nope, no state... dont load then
+		} catch (IOException | ClassNotFoundException e) {
+			// nope, no state - dont load then
 		}
 	}
 	

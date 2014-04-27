@@ -112,9 +112,8 @@ public class FileTransfer implements Serializable {
 		try {
 			loadState();
 			log("Loaded existing transfer data");
-		}
-		catch (Exception e) {
-			// nope, no state... dont load then
+		} catch (IOException | ClassNotFoundException e) {
+			// nope, no state - dont load then
 		}
 	}
 	
@@ -151,6 +150,9 @@ public class FileTransfer implements Serializable {
 		// initialize metadata
 		this.fileSize = file_size;
 		this.blockSize = block_size;
+		
+		// save metadata
+		saveState();
 	}
 	
 	/**

@@ -33,7 +33,7 @@ public class Testing {
 		s2.seedFile("bigfile", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
 		
 		// seeder 3 seeds file
-		FileClient s3 = new FileClient("/tmp/c1", "S2"); // XXX
+		FileClient s3 = new FileClient("/tmp/c1", "S3"); // XXX
 		s3.addTracker("localhost", TrackerDaemon.DEFAULT_TRACKER_PORT);
 		s3.seedFile("bigfile", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
 

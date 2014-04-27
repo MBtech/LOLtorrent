@@ -67,9 +67,8 @@ public class FileClient implements Serializable {
 		try {
 			loadState();
 			log("Loaded existing client data");
-		}
-		catch (Exception e) {
-			// nope, no state... dont load then
+		} catch (IOException | ClassNotFoundException e) {
+			// nope, no state - dont load then
 		}
 	}
 	
