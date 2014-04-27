@@ -6,4 +6,4 @@ Nothing fancy. Pretty basic stuff. Code is pretty ugly at the moment so bear wit
 I am improving it.
 
 Project Javadoc:
-https://github.com/joaomlneto/P2PFileSharing/blob/master/doc/index.html
+http://htmlpreview.github.io/?https://github.com/joaomlneto/P2PFileSharing/blob/master/doc/index.html
