@@ -47,12 +47,12 @@ public class FileSeederThread implements Runnable, PeerRequestProcessor {
 	 * @param sock socket for listening
 	 * @throws IOException 
 	 */
-	public FileSeederThread(FileTransfer file_transfer, Socket sock) throws IOException {
-		this.fileTransfer = file_transfer;
+	public FileSeederThread(FileTransfer fileTransfer, Socket sock) throws IOException {
+		this.fileTransfer = fileTransfer;
 		this.sock = sock;
 		this.is = new ObjectInputStream(sock.getInputStream());
 		this.os = new ObjectOutputStream(sock.getOutputStream());
-		fileAccess = new RandomAccessFile(file_transfer.getLocalFile(), "r");
+		fileAccess = new RandomAccessFile(fileTransfer.getLocalFile(), "r");
 	}
 	
 	/**
@@ -67,17 +67,17 @@ public class FileSeederThread implements Runnable, PeerRequestProcessor {
 			throw new BlockNotPresentException("dont have block " + index);
 		}
 		
-		// initialize
+		// compute size of the block
 		// the last block's size may be different. if this is the last block, its
 		// size is the division remainder between filesize%blocksize
-		int num_blocks = fileTransfer.numBlocks();
-		int file_size = (int) fileTransfer.fileSize();
-		int block_size = fileTransfer.blockSize();
-		int size = ((index==num_blocks-1) ? (file_size%block_size) : block_size);
+		int numBlocks = fileTransfer.numBlocks();
+		int fileSize = (int) fileTransfer.fileSize();
+		int blockSize = fileTransfer.blockSize();
+		int size = ((index==numBlocks-1) ? (fileSize%blockSize) : blockSize);
 		byte[] block = new byte[size];
 		
 		// process
-		this.fileAccess.seek(block_size*index); // move file pointer
+		this.fileAccess.seek(blockSize*index); // move file pointer
 		fileAccess.read(block); // read
 		return block;
 	}
@@ -116,8 +116,8 @@ public class FileSeederThread implements Runnable, PeerRequestProcessor {
 	@Override
 	public void processFileMetadataRequestMessage(FileMetadataRequestMessage msg) throws IOException {
 		String filename = fileTransfer().filename();
-		long file_size = fileTransfer().fileSize();
-		int block_size = fileTransfer().blockSize();
+		long fileSize = fileTransfer().fileSize();
+		int blockSize = fileTransfer().blockSize();
 		
 		// check request parameters
 		if(!msg.filename().equals(filename)) {
@@ -127,7 +127,7 @@ public class FileSeederThread implements Runnable, PeerRequestProcessor {
 		}
 		
 		// send response
-		os.writeObject(new FileMetadataResponseMessage(filename, file_size, block_size));
+		os.writeObject(new FileMetadataResponseMessage(filename, fileSize, blockSize));
 	}
 
 	@Override
@@ -158,7 +158,7 @@ public class FileSeederThread implements Runnable, PeerRequestProcessor {
 	@Override
 	public void processBlocksPresentRequestMessage(BlocksPresentRequestMessage msg) throws IOException {
 		String filename = fileTransfer().filename();
-		BitSet blocks_present = fileTransfer().getBlocksPresent();
+		BitSet blocksPresent = fileTransfer().getBlocksPresent();
 		
 		// check request parameters
 		if(!msg.filename().equals(filename)) {
@@ -168,7 +168,7 @@ public class FileSeederThread implements Runnable, PeerRequestProcessor {
 		}
 		
 		// send response
-		os.writeObject(new BlocksPresentResponseMessage(filename, blocks_present));
+		os.writeObject(new BlocksPresentResponseMessage(filename, blocksPresent));
 	}
 
 }

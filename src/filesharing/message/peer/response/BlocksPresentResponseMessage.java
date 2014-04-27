@@ -5,20 +5,43 @@ import java.util.BitSet;
 
 import filesharing.core.processor.PeerResponseProcessor;
 
+/**
+ * Peer response: peer replies with the list of blocks he has for a given file
+ */
 public class BlocksPresentResponseMessage extends PeerResponseMessage {
 	
+	/**
+	 * Name of the file
+	 */
 	private String filename;
+	
+	/**
+	 * Blocks present for the file
+	 */
 	private BitSet blocks_present;
 	
-	public BlocksPresentResponseMessage(String filename, BitSet blocks_present) {
+	/**
+	 * Message constructor
+	 * @param filename name of the file
+	 * @param blocksPresent blocks peer has
+	 */
+	public BlocksPresentResponseMessage(String filename, BitSet blocksPresent) {
 		this.filename = filename;
-		this.blocks_present = blocks_present;
+		this.blocks_present = blocksPresent;
 	}
 	
+	/**
+	 * Name of the file
+	 * @return name of the file
+	 */
 	public String filename() {
 		return filename;
 	}
 	
+	/**
+	 * BitSet representing the list of blocks the peer has
+	 * @return blocks peer has
+	 */
 	public BitSet blocksPresent() {
 		return blocks_present;
 	}

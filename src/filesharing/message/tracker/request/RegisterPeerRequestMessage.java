@@ -4,6 +4,9 @@ import java.io.IOException;
 
 import filesharing.core.processor.TrackerRequestProcessor;
 
+/**
+ * Tracker request: peer requests to register him as a peer for a given file
+ */
 public class RegisterPeerRequestMessage extends TrackerRequestMessage {
 	
 	/**
@@ -14,24 +17,37 @@ public class RegisterPeerRequestMessage extends TrackerRequestMessage {
 	/**
 	 * Port for other peers to connect to
 	 */
-	private int data_port;
+	private int dataPort;
 	
-	public RegisterPeerRequestMessage(String filename, int data_port) {
+	/**
+	 * Message constructor
+	 * @param filename name of the file
+	 * @param dataPort port for other peers to connect to
+	 */
+	public RegisterPeerRequestMessage(String filename, int dataPort) {
 		this.filename = filename;
-		this.data_port = data_port;
+		this.dataPort = dataPort;
+	}
+	
+	/**
+	 * name of the file
+	 * @return name of the file
+	 */
+	public String filename() {
+		return filename;
+	}
+	
+	/**
+	 * Data port for incomming peer connections
+	 * @return data port
+	 */
+	public int dataPort() {
+		return dataPort;
 	}
 
 	@Override
 	public void accept(TrackerRequestProcessor proc) throws IOException {
 		proc.processRegisterPeerRequestMessage(this);
-	}
-	
-	public String filename() {
-		return filename;
-	}
-	
-	public int dataPort() {
-		return data_port;
 	}
 
 	@Override

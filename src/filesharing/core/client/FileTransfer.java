@@ -98,13 +98,13 @@ public class FileTransfer implements Serializable {
 	/**
 	 * Creates a new file transfer
 	 * @param filename the global name of the file
-	 * @param local_file pointer to local file
+	 * @param localFile pointer to local file
 	 * @throws IOException 
 	 */
-	public FileTransfer(FileClient client, String filename, File local_file) throws IOException {
+	public FileTransfer(FileClient client, String filename, File localFile) throws IOException {
 		this.client = client;
 		this.filename = filename;
-		this.localFile = local_file;
+		this.localFile = localFile;
 		this.seeder = new FileSeeder(this);
 		this.downloader = new FileDownloader(this);
 		
@@ -119,10 +119,10 @@ public class FileTransfer implements Serializable {
 	
 	/**
 	 * Add a list of trackers for this file
-	 * @param new_trackers a collection of tracker information objects
+	 * @param newTrackers a collection of tracker information objects
 	 */
-	public void addTrackers(Set<TrackerConnection> new_trackers) {
-		trackerList.addAll(new_trackers);
+	public void addTrackers(Set<TrackerConnection> newTrackers) {
+		trackerList.addAll(newTrackers);
 	}
 	
 	/**
@@ -136,11 +136,11 @@ public class FileTransfer implements Serializable {
 	
 	/**
 	 * Sets metadata for the file transfer
-	 * @param file_size the size of the file
-	 * @param block_size the size of the transfer blocks
+	 * @param fileSize the size of the file
+	 * @param blockSize the size of the transfer blocks
 	 * @throws IOException
 	 */
-	protected synchronized void setMetadata(long file_size, int block_size) throws IOException {
+	protected synchronized void setMetadata(long fileSize, int blockSize) throws IOException {
 		// dont set metadata if already present
 		if(hasMetadata()) return;
 		
@@ -148,8 +148,8 @@ public class FileTransfer implements Serializable {
 		hasMetadata = true;
 		
 		// initialize metadata
-		this.fileSize = file_size;
-		this.blockSize = block_size;
+		this.fileSize = fileSize;
+		this.blockSize = blockSize;
 		
 		// save metadata
 		saveState();
@@ -164,11 +164,11 @@ public class FileTransfer implements Serializable {
 		// check if metadata already loaded
 		if(hasMetadata()) return;
 		
-		int num_blocks = (int) localFile.length()/blockSize
+		int numBlocks = (int) localFile.length()/blockSize
 		                + ((localFile.length()%blockSize != 0) ? 1 : 0);
 		
 		// set all blocks as present
-		blocksPresent.set(0, num_blocks);
+		blocksPresent.set(0, numBlocks);
 		
 		// create metadata
 		setMetadata(localFile.length(), blockSize);
@@ -261,17 +261,17 @@ public class FileTransfer implements Serializable {
 		
 		// read object from file
 		ObjectInputStream is = new ObjectInputStream(new FileInputStream(file));
-		FileTransfer file_transfer = (FileTransfer) is.readObject();
+		FileTransfer fileTransfer = (FileTransfer) is.readObject();
 		is.close();
 		
 		// copy state variables
-		isDownloading = file_transfer.isDownloading();
-		isSeeding = file_transfer.isSeeding();
-		hasMetadata = file_transfer.hasMetadata();
-		trackerList = file_transfer.getTrackers();
-		fileSize = file_transfer.fileSize();
-		blockSize = file_transfer.blockSize();
-		blocksPresent = file_transfer.getBlocksPresent();
+		isDownloading = fileTransfer.isDownloading();
+		isSeeding = fileTransfer.isSeeding();
+		hasMetadata = fileTransfer.hasMetadata();
+		trackerList = fileTransfer.getTrackers();
+		fileSize = fileTransfer.fileSize();
+		blockSize = fileTransfer.blockSize();
+		blocksPresent = fileTransfer.getBlocksPresent();
 		
 		// resume file transfer
 		if(isDownloading()) {

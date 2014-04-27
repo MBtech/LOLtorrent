@@ -4,6 +4,9 @@ import java.io.IOException;
 
 import filesharing.core.processor.TrackerResponseProcessor;
 
+/**
+ * Tracker response: tracker replies the request was successful
+ */
 public class SuccessResponseMessage extends TrackerResponseMessage {
 
 	@Override

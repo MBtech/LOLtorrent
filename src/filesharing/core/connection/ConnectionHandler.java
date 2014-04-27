@@ -75,7 +75,7 @@ public class ConnectionHandler implements Serializable, Comparable<ConnectionHan
 	 */
 	@Override
 	public int compareTo(ConnectionHandler handler) {
-		return (this.host()+this.port()).compareTo(handler.host()+handler.port);
+		return (this.host()+":"+this.port()).compareTo(handler.host()+":"+handler.port);
 	}
 	
 	/**

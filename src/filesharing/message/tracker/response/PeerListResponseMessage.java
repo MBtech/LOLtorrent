@@ -8,30 +8,47 @@ import java.util.List;
 import filesharing.core.connection.PeerConnection;
 import filesharing.core.processor.TrackerResponseProcessor;
 
+/**
+ * Tracker response: tracker replies with the list of peers for a given file
+ */
 public class PeerListResponseMessage extends TrackerResponseMessage {
 	
-	private List<PeerConnection> peer_list;
+	/**
+	 * List of peer connections
+	 */
+	private List<PeerConnection> peerList;
 	
-	public PeerListResponseMessage(Collection<PeerConnection> peer_list) {
-		this.peer_list = new ArrayList<PeerConnection>(peer_list);
+	/**
+	 * Message constructor
+	 * @param peerList a collection of peers
+	 */
+	public PeerListResponseMessage(Collection<PeerConnection> peerList) {
+		this.peerList = new ArrayList<PeerConnection>(peerList);
 	}
 	
+	/**
+	 * Message constructor without any peers provided
+	 */
 	public PeerListResponseMessage() {
-		this.peer_list = new ArrayList<PeerConnection>();
-	}
-
-	@Override
-	public String toString() {
-		return super.toString() + "Peer list response: " + peerList();
+		this.peerList = new ArrayList<PeerConnection>();
 	}
 	
+	/**
+	 * List of peers for the file
+	 * @return a list of peer connections
+	 */
 	public List<PeerConnection> peerList() {
-		return peer_list;
+		return peerList;
 	}
 
 	@Override
 	public void accept(TrackerResponseProcessor proc) throws IOException {
 		proc.processPeerListResponseMessage(this);
+	}
+
+	@Override
+	public String toString() {
+		return super.toString() + "Peer list response: " + peerList();
 	}
 
 }

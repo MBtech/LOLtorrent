@@ -4,26 +4,58 @@ import java.io.IOException;
 
 import filesharing.core.processor.PeerResponseProcessor;
 
+/**
+ * Peer response: peer replies with the contents of a given block
+ */
 public class FileBlockResponseMessage extends PeerResponseMessage {
 	
+	/**
+	 * Name of the file
+	 */
 	private String filename;
-	private int block_index;
+	
+	/**
+	 * Index of the block
+	 */
+	private int blockIndex;
+	
+	/**
+	 * Block contents
+	 */
 	private byte[] block;
 	
-	public FileBlockResponseMessage(String filename, int block_index, byte[] block) {
+	/**
+	 * Message constructor
+	 * @param filename name of the file
+	 * @param blockIndex block index
+	 * @param block block contents
+	 */
+	public FileBlockResponseMessage(String filename, int blockIndex, byte[] block) {
 		this.filename = filename;
-		this.block_index = block_index;
+		this.blockIndex = blockIndex;
 		this.block = block;
 	}
 	
+	/**
+	 * Filename
+	 * @return filename
+	 */
 	public String filename() {
 		return filename;
 	}
 	
+	/**
+	 * Block index
+	 * @return block index
+	 */
 	public int blockIndex() {
-		return block_index;
+		return blockIndex;
 	}
 	
+	/**
+	 * Block contents
+	 * @return block contents
+	 */
 	public byte[] block() {
 		return block;
 	}

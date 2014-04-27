@@ -83,11 +83,11 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	
 	/**
 	 * Constructor
-	 * @param file_transfer information about file to download
+	 * @param fileTransfer information about file to download
 	 * @throws FileNotFoundException 
 	 */
-	public FileDownloader(FileTransfer file_transfer) throws FileNotFoundException {
-		this.fileTransfer = file_transfer;
+	public FileDownloader(FileTransfer fileTransfer) throws FileNotFoundException {
+		this.fileTransfer = fileTransfer;
 	}
 	
 	/**
@@ -147,8 +147,8 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	 */
 	protected synchronized int getBlockIndexForDownload(FileDownloaderThread peer) {
 		String filename = fileTransfer.filename();
-		BitSet local_blocks = fileTransfer.getBlocksPresent();
-		BitSet peer_blocks = peer.getPeerBlocksPresent();
+		BitSet localBlocks = fileTransfer.getBlocksPresent();
+		BitSet peerBlocks = peer.getPeerBlocksPresent();
 		
 		// check if we already have all the blocks
 		if(fileTransfer.haveAllBlocks()) {
@@ -156,31 +156,31 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 		}
 		
 		// check which blocks peer has that we dont have
-		BitSet peer_new_blocks = new BitSet();
-		peer_new_blocks.or(peer_blocks);
-		peer_new_blocks.andNot(local_blocks);
+		BitSet peerNewBlocks = new BitSet();
+		peerNewBlocks.or(peerBlocks);
+		peerNewBlocks.andNot(localBlocks);
 		
 		// check which blocks peer has that we dont have
 		// and that we have not requested for download yet
-		BitSet blocks_interest = new BitSet();
-		blocks_interest.or(peer_new_blocks);
-		blocks_interest.andNot(this.blocksForDownload);
+		BitSet blocksInterest = new BitSet();
+		blocksInterest.or(peerNewBlocks);
+		blocksInterest.andNot(this.blocksForDownload);
 		
 		//check if peer does not have any new blocks at all
-		if(peer_new_blocks.cardinality() == 0) {
+		if(peerNewBlocks.cardinality() == 0) {
 			throw new NoNewBlocksForDownloadException("peer has no new blocks for file " + filename);
 		}
 		
 		// check if peer does not have any blocks that are not present or assigned
-		if(blocks_interest.cardinality() == 0) {
+		if(blocksInterest.cardinality() == 0) {
 			// assign one that has already been assigned then ("endgame"?)
-			return peer_new_blocks.nextSetBit(0);
+			return peerNewBlocks.nextSetBit(0);
 		}
 		else {
 			// assign a block that has never been requested for download
-			int block_index = blocks_interest.nextSetBit(0);
-			this.blocksForDownload.set(block_index);
-			return block_index;
+			int blockIndexForDownload = blocksInterest.nextSetBit(0);
+			this.blocksForDownload.set(blockIndexForDownload);
+			return blockIndexForDownload;
 		}
 		
 	}

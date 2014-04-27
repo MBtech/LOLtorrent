@@ -6,31 +6,17 @@ import filesharing.core.processor.PeerResponseProcessor;
 import filesharing.exception.PeerErrorException;
 import filesharing.message.peer.PeerMessage;
 
+/**
+ * Superclass for all peer response messages
+ * Represents a message to be sent as a response from a peer
+ */
 public abstract class PeerResponseMessage extends PeerMessage {
-	/**
-	 * Tracker response message type codes
-	 */
-	public static enum ResponseType {
-		/**
-		 * List of valid response codes
-		 */
-		INVALID_REQUEST (1),
-		OK              (0);
-
-		private final short message_code;
-
-		ResponseType(short message_code) {
-			this.message_code = message_code;
-		}
-
-		ResponseType(int message_code) {
-			this.message_code = (short)message_code;
-		}
-
-		public int messageCode() {
-			return this.message_code;
-		}
-	}
 	
+	/**
+	 * Accept a processor for the message
+	 * @param proc processor for the peer response
+	 * @throws PeerErrorException if peer replies with an error message
+	 * @throws IOException
+	 */
 	public abstract void accept(PeerResponseProcessor proc) throws PeerErrorException, IOException;
 }

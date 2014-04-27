@@ -4,14 +4,27 @@ import java.io.IOException;
 
 import filesharing.core.processor.PeerRequestProcessor;
 
+/**
+ * Peer request: asks peer what blocks he has of a given file
+ */
 public class BlocksPresentRequestMessage extends PeerRequestMessage {
 	
+	/**
+	 * Name of the file
+	 */
 	String filename;
 	
+	/**
+	 * Message constructor
+	 */
 	public BlocksPresentRequestMessage(String filename) {
 		this.filename = filename;
 	}
 	
+	/**
+	 * Name of the file
+	 * @return name of the file
+	 */
 	public String filename() {
 		return filename;
 	}

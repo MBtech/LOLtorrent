@@ -5,14 +5,28 @@ import java.io.IOException;
 import filesharing.core.processor.TrackerResponseProcessor;
 import filesharing.exception.TrackerErrorException;
 
+/**
+ * Tracker response: tracker replies with an error message
+ */
 public class TrackerErrorResponseMessage extends TrackerResponseMessage {
-	
+
+	/**
+	 * Reason for the error
+	 */
 	private String reason;
 	
-	public TrackerErrorResponseMessage(String error) {
-		this.reason = error;
+	/**
+	 * Message constructor
+	 * @param reason reason for failure
+	 */
+	public TrackerErrorResponseMessage(String reason) {
+		this.reason = reason;
 	}
 	
+	/**
+	 * A message describing the reason for the error
+	 * @return reason for the error
+	 */
 	public String reason() {
 		return reason;
 	}

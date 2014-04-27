@@ -45,11 +45,11 @@ public class FileSeeder implements Serializable, Runnable, TrackerResponseProces
 	
 	/**
 	 * Constructor of a file seeder
-	 * @param file_transfer information of the file to be seeded
+	 * @param fileTransfer information of the file to be seeded
 	 * @throws IOException
 	 */
-	public FileSeeder(FileTransfer file_transfer) throws IOException {
-		this.fileTransfer = file_transfer;
+	public FileSeeder(FileTransfer fileTransfer) throws IOException {
+		this.fileTransfer = fileTransfer;
 		serverSocket = new ServerSocket(0); // bind to a random port
 	}
 	
@@ -89,10 +89,10 @@ public class FileSeeder implements Serializable, Runnable, TrackerResponseProces
 		while(fileTransfer.isSeeding()) {
 			try {
 				// accept incomming connections
-				Socket client_socket = serverSocket.accept();
-				log("new connection from " + client_socket.getRemoteSocketAddress());
+				Socket clientSocket = serverSocket.accept();
+				log("new connection from " + clientSocket.getRemoteSocketAddress());
 				// create a new connection handler and run in a separate thread
-				FileSeederThread handler = new FileSeederThread(fileTransfer, client_socket);
+				FileSeederThread handler = new FileSeederThread(fileTransfer, clientSocket);
 				executor.execute(handler);
 			} catch (IOException e) {
 				log("Problem accepting a connection. " + e.getMessage());
@@ -112,12 +112,12 @@ public class FileSeeder implements Serializable, Runnable, TrackerResponseProces
 	@Override
 	public void processTrackerErrorResponseMessage(TrackerErrorResponseMessage msg) throws TrackerErrorException {
 		/* hmm... just ignore errors from tracker */
-		/* or should we also throw tracker error exceptions? */
 		log("tracker returned " + msg.reason());
 	}
 
 	@Override
 	public void processPeerListResponseMessage(PeerListResponseMessage msg) {
+		/* why would the tracker reply this? ... ill just ignore it */
 		log("tracker returned " + msg);
 	}
 

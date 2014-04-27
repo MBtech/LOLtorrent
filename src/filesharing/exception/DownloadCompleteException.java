@@ -1,7 +1,8 @@
 package filesharing.exception;
 
 /**
- * Represents an exception in peer behaviour
+ * Thrown when asking downloader for a block index for download but the download
+ * is already complete
  */
 public class DownloadCompleteException extends FileSharingRuntimeException {
 

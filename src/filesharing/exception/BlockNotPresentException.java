@@ -1,7 +1,7 @@
 package filesharing.exception;
 
 /**
- * Represents an exception in peer behaviour
+ * Thrown when trying to read a block that is not present
  */
 public class BlockNotPresentException extends FileSharingRuntimeException {
 

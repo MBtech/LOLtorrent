@@ -87,8 +87,8 @@ public class TrackerRequestHandler implements Runnable, TrackerRequestProcessor 
 		// check if file is registered
 		if(tracker.peerRecord().containsKey(filename)) {
 			// if it is, return peer list
-			Collection<PeerConnection> peer_list = tracker.peerRecord().get(filename);
-			os.writeObject(new PeerListResponseMessage(peer_list));
+			Collection<PeerConnection> peerList = tracker.peerRecord().get(filename);
+			os.writeObject(new PeerListResponseMessage(peerList));
 		}
 		else {
 			// if it is not, return an empty list
@@ -105,7 +105,7 @@ public class TrackerRequestHandler implements Runnable, TrackerRequestProcessor 
 		
 		// initialize
 		String filename = msg.filename();
-		int data_port = msg.dataPort();
+		int dataPort = msg.dataPort();
 		
 		// check if this file has not been registered yet
 		if(!tracker.peerRecord().containsKey(filename)) {
@@ -113,7 +113,7 @@ public class TrackerRequestHandler implements Runnable, TrackerRequestProcessor 
 			tracker.peerRecord().put(filename, Collections.synchronizedSet(new TreeSet<PeerConnection>()));
 		}
 		// add the peer to the list of peers for the given filename
-		tracker.addPeer(filename,  new PeerConnection(sock.getInetAddress().getHostAddress(), data_port));
+		tracker.addPeer(filename,  new PeerConnection(sock.getInetAddress().getHostAddress(), dataPort));
 		
 		// save tracker state
 		tracker.saveState();

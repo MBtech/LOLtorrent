@@ -76,8 +76,8 @@ public class TrackerDaemon implements Runnable, Serializable {
 	 * @param port tracker listen port
 	 * @throws IOException
 	 */
-	public TrackerDaemon(String working_dir, String id, int port) throws IOException {
-		this.workingDir = new File(working_dir);
+	public TrackerDaemon(String workingDir, String id, int port) throws IOException {
+		this.workingDir = new File(workingDir);
 		this.serverSocket = new ServerSocket(port);
 		this.id = id;
 	}
@@ -87,8 +87,8 @@ public class TrackerDaemon implements Runnable, Serializable {
 	 * @param id tracker identifier
 	 * @throws IOException
 	 */
-	public TrackerDaemon(String working_dir, String id) throws IOException {
-		this(working_dir, id, DEFAULT_TRACKER_PORT);
+	public TrackerDaemon(String workingDir, String id) throws IOException {
+		this(workingDir, id, DEFAULT_TRACKER_PORT);
 	}
 	
 	/**
@@ -96,16 +96,16 @@ public class TrackerDaemon implements Runnable, Serializable {
 	 * @param port tracker listen port
 	 * @throws IOException
 	 */
-	public TrackerDaemon(String working_dir, int port) throws IOException {
-		this(working_dir, RandomStringUtils.randomAlphabetic(5), port);
+	public TrackerDaemon(String workingDir, int port) throws IOException {
+		this(workingDir, RandomStringUtils.randomAlphabetic(5), port);
 	}
 	
 	/**
 	 * Creates a tracker with a random ID in the default port
 	 * @throws IOException
 	 */
-	public TrackerDaemon(String working_dir) throws IOException {
-		this(working_dir, RandomStringUtils.randomAlphabetic(5), DEFAULT_TRACKER_PORT);
+	public TrackerDaemon(String workingDir) throws IOException {
+		this(workingDir, RandomStringUtils.randomAlphabetic(5), DEFAULT_TRACKER_PORT);
 	}
 	
 	/**
@@ -185,10 +185,10 @@ public class TrackerDaemon implements Runnable, Serializable {
 		while(true) {
 			try {
 				// accept incomming connections
-				Socket client_socket = serverSocket.accept();
+				Socket clientSocket = serverSocket.accept();
 				//log("New connection from " + client_socket.getRemoteSocketAddress());
 				// create a new connection handler and run in a separate thread
-				TrackerRequestHandler handler = new TrackerRequestHandler(this, client_socket);
+				TrackerRequestHandler handler = new TrackerRequestHandler(this, clientSocket);
 				executor.execute(handler);
 			} catch (IOException e) {
 				log("Problem accepting a connection");

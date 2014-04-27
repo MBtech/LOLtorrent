@@ -4,14 +4,28 @@ import java.io.IOException;
 
 import filesharing.core.processor.PeerRequestProcessor;
 
+/**
+ * Peer request: asks peer metadata for a given file
+ */
 public class FileMetadataRequestMessage extends PeerRequestMessage {
 	
+	/**
+	 * Name of the file
+	 */
 	String filename;
 	
+	/**
+	 * Message constructor
+	 * @param filename name of the file
+	 */
 	public FileMetadataRequestMessage(String filename) {
 		this.filename = filename;
 	}
 	
+	/**
+	 * Name of the file
+	 * @return name of the file
+	 */
 	public String filename() {
 		return filename;
 	}

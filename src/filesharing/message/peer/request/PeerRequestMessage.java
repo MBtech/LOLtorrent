@@ -5,33 +5,17 @@ import java.io.IOException;
 import filesharing.core.processor.PeerRequestProcessor;
 import filesharing.message.peer.PeerMessage;
 
+/**
+ * Superclass for all peer request messages
+ * Represents a message to be sent as a request to a peer
+ */
 public abstract class PeerRequestMessage extends PeerMessage {
-
-	/**
-	 * Tracker request message type codes
-	 */
-	public static enum RequestType {
-		/**
-		 * List of valid codes
-		 */
-		REGISTER_PEER (0),
-		GET_PEER_LIST (1);
-
-		private final short message_code;
-
-		RequestType(short message_code) {
-			this.message_code = message_code;
-		}
-
-		RequestType(int message_code) {
-			this.message_code = (short)message_code;
-		}
-
-		public int messageCode() {
-			return this.message_code;
-		}
-	}
 	
+	/**
+	 * Accept a processor for the message
+	 * @param proc processor for the peer request
+	 * @throws IOException
+	 */
 	public abstract void accept(PeerRequestProcessor proc) throws IOException;
 	
 }

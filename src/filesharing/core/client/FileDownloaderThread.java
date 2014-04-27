@@ -41,11 +41,11 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 	/**
 	 * Constructs a new downloader thread
 	 * @param downloader the parent downloader
-	 * @param peer_information information about the peer to connect to
+	 * @param peerInformation information about the peer to connect to
 	 */
-	public FileDownloaderThread(FileDownloader downloader, PeerConnection peer_information) {
+	public FileDownloaderThread(FileDownloader downloader, PeerConnection peerInformation) {
 		this.downloader = downloader;
-		this.peerConnection = peer_information;
+		this.peerConnection = peerInformation;
 	}
 	
 	/**
@@ -86,8 +86,8 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 			// download the blocks
 			while(downloader.getFileTransfer().isDownloading()) {
 				try {
-					int block_index = downloader.getBlockIndexForDownload(this);
-					msg = new FileBlockRequestMessage(filename, block_index);
+					int blockIndex = downloader.getBlockIndexForDownload(this);
+					msg = new FileBlockRequestMessage(filename, blockIndex);
 					peerConnection.sendMessage(msg, this);
 				}
 				catch(DownloadCompleteException e) {

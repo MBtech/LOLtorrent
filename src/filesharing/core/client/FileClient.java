@@ -64,16 +64,16 @@ public class FileClient implements Serializable {
 	 * Creates a client with the specified ID
 	 * @param id a string identifier
 	 */
-	public FileClient(String working_dir, String id) {
+	public FileClient(String workingDir, String id) {
 		this.id = id;
-		this.workingDir = new File(working_dir);
+		this.workingDir = new File(workingDir);
 	}
 	
 	/**
 	 * Creates a client with a random ID
 	 */
-	public FileClient(String working_dir) {
-		this(working_dir, RandomStringUtils.randomAlphabetic(5));
+	public FileClient(String workingDir) {
+		this(workingDir, RandomStringUtils.randomAlphabetic(5));
 	}
 	
 	/**
@@ -127,9 +127,9 @@ public class FileClient implements Serializable {
 		if(!fileList.containsKey(filename)) {
 			// nope - add a new entry to the list
 			File file = getLocalFile(filename);
-			FileTransfer file_info = new FileTransfer(this, filename, file);
+			FileTransfer fileTransfer = new FileTransfer(this, filename, file);
 			filenameList.add(filename);
-			fileList.put(filename, file_info);
+			fileList.put(filename, fileTransfer);
 		}
 		fileList.get(filename).addTrackers(trackers);
 		saveState();
@@ -170,11 +170,11 @@ public class FileClient implements Serializable {
 	/**
 	 * Add file for seeding in specified list of trackers
 	 * @param filename name of the file to be seeded
-	 * @param block_size size of the file blocks to be used
+	 * @param blockSize size of the file blocks to be used
 	 * @param trackers list of trackers
 	 * @throws IOException 
 	 */
-	public void seedFile(String filename, int block_size, Set<TrackerConnection> trackers) throws IOException {
+	public void seedFile(String filename, int blockSize, Set<TrackerConnection> trackers) throws IOException {
 		// add file to list
 		addFile(filename, trackers);
 		// start seeding
@@ -185,11 +185,11 @@ public class FileClient implements Serializable {
 	/**
 	 * Add file for seeding with default tracker list
 	 * @param filename name of the file to be seeded
-	 * @param block_size size of the file blocks to be used
+	 * @param blockSize size of the file blocks to be used
 	 * @throws IOException
 	 */
-	public void seedFile(String filename, int block_size) throws IOException {
-		seedFile(filename, block_size, trackerList);
+	public void seedFile(String filename, int blockSize) throws IOException {
+		seedFile(filename, blockSize, trackerList);
 	}
 	
 	/**
@@ -205,7 +205,7 @@ public class FileClient implements Serializable {
 	 * @throws IOException
 	 */
 	public void saveState() throws IOException {
-		File f = new File(workingDirectory() + File.separator + id() + FILE_EXTENSION);
+		File file = new File(workingDirectory() + File.separator + id() + FILE_EXTENSION);
 		
 		// write transfer states as well
 		for(FileTransfer transfer : fileList.values()) {
@@ -213,10 +213,10 @@ public class FileClient implements Serializable {
 		}
 		
 		// create new file if it doesnt exist
-		f.createNewFile();
+		file.createNewFile();
 		
 		// dump client state into file
-		ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(f));
+		ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(file));
 		os.writeObject(this);
 		os.close();
 	}
@@ -227,10 +227,10 @@ public class FileClient implements Serializable {
 	 * @throws ClassNotFoundException
 	 */
 	public void loadState() throws IOException, ClassNotFoundException {
-		File f = new File(workingDirectory() + File.separator + id() + FILE_EXTENSION);
+		File file = new File(workingDirectory() + File.separator + id() + FILE_EXTENSION);
 		
 		// load client state from file
-		ObjectInputStream is = new ObjectInputStream(new FileInputStream(f));
+		ObjectInputStream is = new ObjectInputStream(new FileInputStream(file));
 		FileClient client = (FileClient) is.readObject();
 		is.close();
 		
