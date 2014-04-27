@@ -33,7 +33,7 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	/**
 	 * Delay between asking tracker for new peers
 	 */
-	public static final int TRACKER_QUERY_DELAY = 1; // seconds
+	public static final int TRACKER_QUERY_DELAY = 10; // seconds
 	
 	/**
 	 * Delay between asking tracker for new peers
@@ -191,6 +191,8 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	private synchronized void updatePeerList() {
 		String filename = fileTransfer.filename();
 		
+		log("Updating list of peers");
+		
 		// connect to trackers and ask for peers for this file
 		for(TrackerConnection tracker : fileTransfer.getTrackers()) {
 			try {
@@ -240,9 +242,12 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	@Override
 	public void run() {
 		try {
+			
+			log("Starting download");
+			
 			// dont run if we already have all the blocks
 			if(fileTransfer.haveAllBlocks()) {
-				log("Aborting download order - already have file");
+				log("Aborting download - already have file");
 				stop();
 				return;
 			}
@@ -254,13 +259,16 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 			// update the peer list of peers
 			updatePeerList();
 			
+			// start a downloader thread for every peer
+			for(PeerConnection peer_info : seedList()) {
+				executor.execute(new FileDownloaderThread(this, peer_info));
+			}
 			
 			// setup periodic tasks
 			final FileDownloader downloader = this;
 			// update peer lists regularly
 			Runnable periodicPeerListUpdateTask = new Runnable() {
 				@Override public void run() {
-					downloader.log("Periodic peer list update: Updating peer list");
 					downloader.updatePeerList();
 				}
 			};
@@ -269,21 +277,16 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 				@Override public void run() {
 					if(downloader.dirtyState) {
 						try {
-							downloader.log("Periodic saving task: committed " + fileTransfer.numBlocksPresent() + " blocks");
+							downloader.log("Committed " + fileTransfer.numBlocksPresent() + " blocks");
 							fileTransfer.saveState();
 						} catch (IOException e) {
-							downloader.log("Periodic saving task: error saving state");
+							downloader.log("Error saving file transfer state");
 						}
 					}
 				}
 			};
 			scheduler.scheduleAtFixedRate(periodicPeerListUpdateTask, 0, TRACKER_QUERY_DELAY, TimeUnit.SECONDS);
 			scheduler.scheduleAtFixedRate(periodicStateSavingTask, 0, SAVE_STATE_DELAY, TimeUnit.SECONDS);
-			
-			// start a downloader thread for every peer
-			for(PeerConnection peer_info : seedList()) {
-				executor.execute(new FileDownloaderThread(this, peer_info));
-			}
 		}
 		catch(IOException e) {
 			// something weird happened
@@ -301,7 +304,7 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	}
 	
 	/**
-	 * Stops downloading, eventually
+	 * Stops downloading the file, eventually
 	 * @throws IOException 
 	 */
 	public void stop() throws IOException {
@@ -333,7 +336,6 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	@Override
 	public void processTrackerErrorResponseMessage(TrackerErrorResponseMessage msg) {
 		/* hmm... just ignore errors from tracker */
-		/* or should we also throw tracker error exceptions? */
 		log("tracker returned " + msg.reason());
 	}
 

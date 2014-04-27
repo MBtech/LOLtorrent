@@ -73,7 +73,7 @@ public class FileSeeder implements Serializable, Runnable, TrackerResponseProces
 	 */
 	@Override
 	public void run() {
-		log("Running on port " + serverSocket.getLocalPort());
+		log("Seeding on port " + serverSocket.getLocalPort());
 		
 		// register with trackers
 		for(TrackerConnection tracker : fileTransfer.getTrackers()) {
@@ -86,8 +86,8 @@ public class FileSeeder implements Serializable, Runnable, TrackerResponseProces
 		}
 		
 		// listen for requests
-		while(true) {
-		try {
+		while(fileTransfer.isSeeding()) {
+			try {
 				// accept incomming connections
 				Socket client_socket = serverSocket.accept();
 				log("new connection from " + client_socket.getRemoteSocketAddress());

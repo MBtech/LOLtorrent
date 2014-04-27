@@ -65,6 +65,11 @@ public class TrackerDaemon implements Runnable, Serializable {
 	 * Contains a list of peers for each file
 	 */
 	private Hashtable<String,Set<PeerConnection>> peerRecord = new Hashtable<String,Set<PeerConnection>>();
+
+	/**
+	 * Determines if tracker shall log messages or not
+	 */
+	private boolean isLogging = true;
 	
 	/**
 	 * Setup a tracker in user defined port
@@ -75,14 +80,6 @@ public class TrackerDaemon implements Runnable, Serializable {
 		this.workingDir = new File(working_dir);
 		this.serverSocket = new ServerSocket(port);
 		this.id = id;
-
-		// load state, if it exists
-		try {
-			loadState();
-			log("Loaded existing tracker data");
-		} catch (IOException | ClassNotFoundException e) {
-			// nope, no state - dont load then
-		}
 	}
 	
 	/**
@@ -123,7 +120,7 @@ public class TrackerDaemon implements Runnable, Serializable {
 	 * Returns the list of peers for all files currently being tracked
 	 * @return the peer records for all files
 	 */
-	public Hashtable<String, Set<PeerConnection>> peerRecord() {
+	protected Hashtable<String, Set<PeerConnection>> peerRecord() {
 		return peerRecord;
 	}
 	
@@ -133,6 +130,16 @@ public class TrackerDaemon implements Runnable, Serializable {
 	 */
 	public String workingDirectory() {
 		return workingDir.getAbsolutePath();
+	}
+	
+	/**
+	 * Adds a peer to the hashtable
+	 * @param filename name of the file the peer is seeding
+	 * @param peer information about how to connect to the peer
+	 */
+	public synchronized void addPeer(String filename, PeerConnection peer) {
+		Set<PeerConnection> filePeers = this.peerRecord.get(filename);
+		filePeers.add(peer);
 	}
 	
 	/**
@@ -179,6 +186,7 @@ public class TrackerDaemon implements Runnable, Serializable {
 			try {
 				// accept incomming connections
 				Socket client_socket = serverSocket.accept();
+				//log("New connection from " + client_socket.getRemoteSocketAddress());
 				// create a new connection handler and run in a separate thread
 				TrackerRequestHandler handler = new TrackerRequestHandler(this, client_socket);
 				executor.execute(handler);
@@ -196,18 +204,40 @@ public class TrackerDaemon implements Runnable, Serializable {
 	}
 	
 	/**
+	 * Enables or disables logging for this client
+	 * @param logging true if enabling, false if disabling
+	 */
+	public void setLogging(boolean logging) {
+		this.isLogging = logging;
+	}
+	
+	/**
 	 * Logs a message to console
 	 * @param msg message to log
 	 */
 	protected void log(String msg) {
-		System.out.println("[TRACKER id=" + id() + "] " + msg);
+		if(isLogging) {
+			System.out.println("[TRACKER id=" + id() + "] " + msg);
+		}
 	}
 	
 	/**
 	 * Returns a text representation of the object
 	 */
-	public String toString() {
-		return "[TRACKER]" + peerRecord;
+	public synchronized String toString() {
+		String nl = System.lineSeparator();
+		
+		// get list of all peers for all files
+		String files = "";
+		for(String filename : peerRecord.keySet()) {
+			files += "- " + filename + ": ";
+			for(PeerConnection peer : peerRecord.get(filename)) {
+				files += peer + " ";
+			}
+			files += nl;
+			
+		}
+		return "[TRACKER]" + nl + files;
 	}
 	
 }

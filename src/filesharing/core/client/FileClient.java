@@ -54,6 +54,11 @@ public class FileClient implements Serializable {
 	 * Indexed by filename for faster searching
 	 */
 	private Set<String> filenameList = new TreeSet<String>();
+
+	/**
+	 * Determines if client shall log messages or not
+	 */
+	private boolean isLogging = true;
 	
 	/**
 	 * Creates a client with the specified ID
@@ -62,14 +67,6 @@ public class FileClient implements Serializable {
 	public FileClient(String working_dir, String id) {
 		this.id = id;
 		this.workingDir = new File(working_dir);
-		
-		// load state, if it exists
-		try {
-			loadState();
-			log("Loaded existing client data");
-		} catch (IOException | ClassNotFoundException e) {
-			// nope, no state - dont load then
-		}
 	}
 	
 	/**
@@ -246,11 +243,6 @@ public class FileClient implements Serializable {
 		for(String filename : client.filenameList()) {
 			addFile(filename);
 		}
-		
-		// resume file transfers
-		for(FileTransfer transfer : fileList.values()) {
-			transfer.loadState();
-		}
 	}
 	
 	/**
@@ -272,13 +264,23 @@ public class FileClient implements Serializable {
 		
 		return "[CLIENT" + client + "]" + files;
 	}
+	
+	/**
+	 * Enables or disables logging for this client
+	 * @param logging true if enabling, false if disabling
+	 */
+	public void setLogging(boolean logging) {
+		this.isLogging = logging;
+	}
 
 	/**
 	 * Logs a message into console
 	 * @param msg message to log
 	 */
 	protected void log(String msg) {
-		System.out.println("[CLIENT id=" + id + "] " + msg);
+		if(isLogging) {
+			System.out.println("[CLIENT id=" + id + "] " + msg);
+		}
 	}
 	
 }

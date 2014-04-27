@@ -51,14 +51,14 @@ public class FileTransfer implements Serializable {
 	private File localFile;
 	
 	/**
+	 * Checks if metadata for the file is loaded
+	 */
+	private boolean hasMetadata = false;
+	
+	/**
 	 * A seeder thread
 	 */
 	private transient FileSeeder seeder = new FileSeeder(this);
-	
-	/**
-	 * Checks if is currently downloading
-	 */
-	private boolean isDownloading = false;
 	
 	/**
 	 * Checks if it is currently seeding
@@ -71,9 +71,9 @@ public class FileTransfer implements Serializable {
 	private transient FileDownloader downloader = new FileDownloader(this);
 	
 	/**
-	 * Checks if metadata for the file is loaded
+	 * Checks if is currently downloading
 	 */
-	private boolean hasMetadata = false;
+	private boolean isDownloading = false;
 	
 	/**
 	 * List of trackers to connect
@@ -164,11 +164,14 @@ public class FileTransfer implements Serializable {
 		// check if metadata already loaded
 		if(hasMetadata()) return;
 		
-		// create metadata
-		setMetadata(localFile.length(), blockSize);
+		int num_blocks = (int) localFile.length()/blockSize
+		                + ((localFile.length()%blockSize != 0) ? 1 : 0);
 		
 		// set all blocks as present
-		blocksPresent.set(0, numBlocks());
+		blocksPresent.set(0, num_blocks);
+		
+		// create metadata
+		setMetadata(localFile.length(), blockSize);
 	}
 	
 	/**
@@ -252,6 +255,7 @@ public class FileTransfer implements Serializable {
 	 * @throws ClassNotFoundException
 	 */
 	public synchronized void loadState() throws IOException, ClassNotFoundException {
+		
 		// compute file location
 		File file = new File(localFile.getAbsolutePath() + FILE_EXTENSION);
 		
@@ -259,10 +263,6 @@ public class FileTransfer implements Serializable {
 		ObjectInputStream is = new ObjectInputStream(new FileInputStream(file));
 		FileTransfer file_transfer = (FileTransfer) is.readObject();
 		is.close();
-		
-		// rebuild transient variables
-		seeder = new FileSeeder(this);
-		downloader = new FileDownloader(this);
 		
 		// copy state variables
 		isDownloading = file_transfer.isDownloading();
@@ -317,12 +317,8 @@ public class FileTransfer implements Serializable {
 		if(!hasMetadata()) {
 			throw new NoMetadataException("file " + filename() + " has no metadata");
 		}
-		// compute number of blocks from file size and block size
-		// how many "full" blocks are there?
-		int num_full_sized_blocks = (int) (fileSize() / blockSize());
-		// check if there is a smaller block in the end
-		int num_smaller_blocks = ((fileSize()%blockSize() != 0) ? 1 : 0);
-		return num_full_sized_blocks + num_smaller_blocks;
+		return (int) fileSize() / blockSize() +
+		       ((fileSize() % blockSize() != 0) ? 1 : 0);
 	}
 	
 	/**
@@ -416,7 +412,7 @@ public class FileTransfer implements Serializable {
 	/**
 	 * Return a textual representation of this object
 	 */
-	public String toString() {
+	public synchronized String toString() {
 		String metadata;
 		if(hasMetadata()) {
 			metadata = "downloading? " + (isDownloading() ? "yes" : "no") + ", " +

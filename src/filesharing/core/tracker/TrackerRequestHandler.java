@@ -6,7 +6,6 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Set;
 import java.util.TreeSet;
 
 import filesharing.core.connection.PeerConnection;
@@ -71,8 +70,7 @@ public class TrackerRequestHandler implements Runnable, TrackerRequestProcessor 
 			}
 		}
 		catch (IOException | ClassNotFoundException e) {
-			log("Exception while accepting connection: " + e.toString());
-			e.printStackTrace();
+			log("Invalid request from client: " + e.toString());
 			// just exit silently
 		}
 	}
@@ -115,8 +113,7 @@ public class TrackerRequestHandler implements Runnable, TrackerRequestProcessor 
 			tracker.peerRecord().put(filename, Collections.synchronizedSet(new TreeSet<PeerConnection>()));
 		}
 		// add the peer to the list of peers for the given filename
-		Set<PeerConnection> peer_list = tracker.peerRecord().get(filename);
-		peer_list.add(new PeerConnection(sock.getInetAddress().getHostAddress(), data_port));
+		tracker.addPeer(filename,  new PeerConnection(sock.getInetAddress().getHostAddress(), data_port));
 		
 		// save tracker state
 		tracker.saveState();

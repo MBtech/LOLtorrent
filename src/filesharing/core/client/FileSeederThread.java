@@ -89,7 +89,7 @@ public class FileSeederThread implements Runnable, PeerRequestProcessor {
 	public void run() {
 		try {
 			// read requests, process them and return the response
-			while(true) {
+			while(fileTransfer.isSeeding()) {
 					// read request
 					PeerRequestMessage msg = (PeerRequestMessage) is.readObject();
 					// process request

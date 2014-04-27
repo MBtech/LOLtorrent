@@ -77,6 +77,8 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 			String filename = downloader.getFileTransfer().filename();
 			PeerRequestMessage msg;
 			
+			downloader.log("Starting download from " + peerConnection);
+			
 			// request the blocks the peer has
 			msg = new BlocksPresentRequestMessage(filename);
 			peerConnection.sendMessage(msg, this);
@@ -95,14 +97,14 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 				catch(NoNewBlocksForDownloadException e) {
 					// peer has no new blocks
 					// request which blocks peer has again and try again
-					msg = new FileMetadataRequestMessage(filename);
+					msg = new BlocksPresentRequestMessage(filename);
 					peerConnection.sendMessage(msg, this);
 					continue;
 				}
 			}
 		} catch (IOException e) {
 			// something really bad happened
-			downloader.log(e.getMessage());
+			downloader.log(peerConnection + " error: " + e.getMessage());
 		}
 	}
 
