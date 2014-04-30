@@ -279,7 +279,7 @@ public class FileClient implements Serializable {
 	 */
 	protected void log(String msg) {
 		if(isLogging) {
-			System.out.println("[CLIENT id=" + id + "] " + msg);
+			System.out.println("[CLIENT " + id + "] " + msg);
 		}
 	}
 	

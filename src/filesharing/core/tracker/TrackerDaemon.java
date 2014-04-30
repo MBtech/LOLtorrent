@@ -217,7 +217,7 @@ public class TrackerDaemon implements Runnable, Serializable {
 	 */
 	protected void log(String msg) {
 		if(isLogging) {
-			System.out.println("[TRACKER id=" + id() + "] " + msg);
+			System.out.println("[TRACKER " + id() + "] " + msg);
 		}
 	}
 	

@@ -6,10 +6,17 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.Socket;
 
+import filesharing.message.FileSharingMessage;
+
 /**
  * This is a connection handler - handles connectivity for a single socket
  */
 public class ConnectionHandler implements Serializable, Comparable<ConnectionHandler> {
+	
+	/**
+	 * Default time to wait with an idle connection before taking action
+	 */
+	public static final int DEFAULT_IDLE_TIMEOUT = 3; // seconds
 
 	/**
 	 * Tracker hostname
@@ -22,11 +29,21 @@ public class ConnectionHandler implements Serializable, Comparable<ConnectionHan
 	private int port;
 	
 	/**
+	 * How much time to wait with an idle connection before closing it
+	 */
+	private transient int idleTimeout = DEFAULT_IDLE_TIMEOUT; // seconds
+	
+	/**
+	 * Last time the socket got a write or a read, miliseconds since unix time
+	 */
+	private transient long lastAccessTime = System.currentTimeMillis();
+	
+	/**
 	 * Connection socket
 	 */
-	protected transient Socket sock;
-	protected transient ObjectOutputStream os;
-	protected transient ObjectInputStream is;
+	private transient Socket sock;
+	private transient ObjectOutputStream os;
+	private transient ObjectInputStream is;
 	
 	/**
 	 * Constructor
@@ -40,16 +57,62 @@ public class ConnectionHandler implements Serializable, Comparable<ConnectionHan
 	}
 	
 	/**
-	 * Establishes a connection with the tracker
+	 * Establishes a connection, if not already connected
 	 * @throws IOException
 	 */
-	protected void connect() throws IOException {
+	public synchronized void connect() throws IOException {
 		if(!sock.isConnected()) {
 			sock = new Socket(host(), port());
 			os = new ObjectOutputStream(sock.getOutputStream());
 			is = new ObjectInputStream(sock.getInputStream());
-			return;
+			GlobalConnectionMonitor.getManager().watch(this);
 		}
+	}
+	
+	/**
+	 * Closes the connection, if established
+	 * @throws IOException
+	 */
+	public synchronized void disconnect() {
+		if(sock.isConnected()) {
+			try {
+				sock.close();
+			} catch (IOException e) {}
+		}
+	}
+	
+	/**
+	 * Checks if it is currently connected to the remote host
+	 * @return true if connected, false otherwise
+	 */
+	public boolean isConnected() {
+		return sock.isConnected();
+	}
+	
+	/**
+	 * Writes a message on socket
+	 * @param msg domain message to be sent
+	 * @throws IOException on connection failure
+	 */
+	public void writeMessage(FileSharingMessage msg) throws IOException {
+		connect();
+		refreshAccessTime();
+		os.writeObject(msg);
+		refreshAccessTime();
+	}
+	
+	/**
+	 * Reads a message from socket
+	 * @return domain message received
+	 * @throws IOException on connection failure
+	 * @throws ClassNotFoundException if message does not belong to the domain
+	 */
+	public FileSharingMessage readMessage() throws IOException, ClassNotFoundException {
+		connect();
+		refreshAccessTime();
+		FileSharingMessage message = (FileSharingMessage) is.readObject();
+		refreshAccessTime();
+		return message;
 	}
 	
 	/**
@@ -66,6 +129,36 @@ public class ConnectionHandler implements Serializable, Comparable<ConnectionHan
 	 */
 	public int port() {
 		return port;
+	}
+	
+	/**
+	 * Sets the connection timeout value
+	 * @param seconds
+	 */
+	public void setIdleTimeout(int seconds) {
+		this.idleTimeout = seconds;
+	}
+	
+	/**
+	 * Returns the current idle timeout for the connection
+	 * @return timeout in seconds
+	 */
+	public int idleTimeout() {
+		return idleTimeout;
+	}
+	
+	/**
+	 * Sets the last accessed time to current time
+	 */
+	public void refreshAccessTime() {
+		lastAccessTime = System.currentTimeMillis();
+	}
+	
+	/**
+	 * Returns the time the socket has been idle, in seconds
+	 */
+	public int getIdleTime() {
+		return (int) (System.currentTimeMillis() - lastAccessTime)/1000;
 	}
 
 	/**
@@ -90,11 +183,11 @@ public class ConnectionHandler implements Serializable, Comparable<ConnectionHan
 		// default deserialization
 		ois.defaultReadObject();
 		sock = new Socket();
+		idleTimeout = DEFAULT_IDLE_TIMEOUT;
+		lastAccessTime = System.currentTimeMillis();
 	}
 	
-	/**
-	 * Returns a textual representation of the object
-	 */
+	@Override
 	public String toString() {
 		return "[CONNECTIONHANDLER]" + host() + ":" + port();
 	}

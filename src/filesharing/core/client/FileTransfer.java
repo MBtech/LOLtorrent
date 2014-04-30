@@ -33,7 +33,7 @@ public class FileTransfer implements Serializable {
 	/**
 	 * Default block size in bytes
 	 */
-	public static final int DEFAULT_BLOCK_SIZE = 1024;
+	public static final int DEFAULT_BLOCK_SIZE = 100;
 	
 	/**
 	 * The client with this file transfer
@@ -434,7 +434,7 @@ public class FileTransfer implements Serializable {
 	 * @param msg
 	 */
 	protected void log(String msg) {
-		client.log("[FILE filename=" + filename + "] " + msg);
+		client.log("[FILE " + filename + "] " + msg);
 	}
 	
 	/**

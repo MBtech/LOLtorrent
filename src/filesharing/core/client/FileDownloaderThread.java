@@ -97,6 +97,9 @@ public class FileDownloaderThread implements Runnable, PeerResponseProcessor {
 				catch(NoNewBlocksForDownloadException e) {
 					// peer has no new blocks
 					// request which blocks peer has again and try again
+					try {
+						Thread.sleep(500);
+					} catch (InterruptedException e1) {}
 					msg = new BlocksPresentRequestMessage(filename);
 					peerConnection.sendMessage(msg, this);
 					continue;

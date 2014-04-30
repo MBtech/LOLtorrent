@@ -30,15 +30,12 @@ public class PeerConnection extends ConnectionHandler {
 	 */
 	public synchronized void sendMessage(PeerRequestMessage msg, PeerResponseProcessor processor) throws IOException {
 		
-		// connect (if not connected yet)
-		connect();
-		
 		// send message
-		os.writeObject(msg);
+		writeMessage(msg);
 		
 		// receive message
 		try {
-			PeerResponseMessage response = (PeerResponseMessage) is.readObject();
+			PeerResponseMessage response = (PeerResponseMessage) readMessage();
 			response.accept(processor);
 		}
 		catch (ClassNotFoundException e) {

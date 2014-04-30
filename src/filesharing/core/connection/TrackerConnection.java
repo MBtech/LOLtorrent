@@ -30,15 +30,12 @@ public class TrackerConnection extends ConnectionHandler {
 	 */
 	public synchronized void sendMessage(TrackerRequestMessage msg, TrackerResponseProcessor proc) throws IOException {
 		
-		// connect (if not connected yet)
-		connect();
-		
 		// send message
-		os.writeObject(msg);
+		writeMessage(msg);
 		
 		// receive message
 		try {
-			TrackerResponseMessage response = (TrackerResponseMessage) is.readObject();
+			TrackerResponseMessage response = (TrackerResponseMessage) readMessage();
 			response.accept(proc);
 		}
 		catch (ClassNotFoundException e) {
