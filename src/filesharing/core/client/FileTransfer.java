@@ -33,7 +33,7 @@ public class FileTransfer implements Serializable {
 	/**
 	 * Default block size in bytes
 	 */
-	public static final int DEFAULT_BLOCK_SIZE = 100;
+	public static final int DEFAULT_BLOCK_SIZE = 1024;
 	
 	/**
 	 * The client with this file transfer
