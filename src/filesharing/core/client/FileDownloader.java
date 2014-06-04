@@ -246,7 +246,8 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 			log("Starting download");
 			
 			// dont run if we already have all the blocks
-			if(fileTransfer.haveAllBlocks()) {
+			
+			if(fileTransfer.haveAllBlocks() && fileTransfer.haveFile()) {
 				log("Aborting download - already have file");
 				stop();
 				return;

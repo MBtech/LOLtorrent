@@ -386,6 +386,16 @@ public class FileTransfer implements Serializable {
 	}
 	
 	/**
+	 * Check if we have the file
+	 * @return true if file is present, false otherwise
+	 */
+	public boolean haveFile() {
+		File f = new File(filename);
+		return f.exists();
+	}
+	
+	
+	/**
 	 * Check if is currently seeding
 	 * @return true if seeding, false otherwise
 	 */

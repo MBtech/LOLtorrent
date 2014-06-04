@@ -178,7 +178,8 @@ public class ConnectionHandler implements Serializable, Comparable<ConnectionHan
 	 * @param ois object input stream
 	 * @throws ClassNotFoundException
 	 * @throws IOException
-	 */
+	 */ 
+	//FIXME Where  is this function being called?
 	private void readObject(ObjectInputStream ois) throws ClassNotFoundException, IOException {
 		// default deserialization
 		ois.defaultReadObject();

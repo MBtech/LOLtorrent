@@ -23,7 +23,7 @@ import filesharing.message.tracker.response.SuccessResponseMessage;
 public class TrackerRequestHandler implements Runnable, TrackerRequestProcessor {
 	
 	/**
-	 * The tracker atached to this handler
+	 * The tracker attached to this handler
 	 */
 	TrackerDaemon tracker;
 	

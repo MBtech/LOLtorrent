@@ -50,7 +50,7 @@ public class FileClient implements Serializable {
 	private transient Map<String, FileTransfer> fileList = new HashMap<String, FileTransfer>();
 	
 	/**
-	 * List of file namess in the client
+	 * List of file names in the client
 	 * Indexed by filename for faster searching
 	 */
 	private Set<String> filenameList = new TreeSet<String>();
