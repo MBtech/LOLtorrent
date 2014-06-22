@@ -29,7 +29,6 @@ import filesharing.message.tracker.response.TrackerErrorResponseMessage;
  * responses
  */
 public class FileDownloader implements Runnable, TrackerResponseProcessor {
-	
 	/**
 	 * Delay between asking tracker for new peers
 	 */
@@ -39,6 +38,8 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	 * Delay between asking tracker for new peers
 	 */
 	public static final int SAVE_STATE_DELAY = 1; // seconds
+	
+	private long stime = 0;
 	
 	/**
 	 * Downloader thread
@@ -300,6 +301,7 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	 */
 	public void start() {
 		if(!runnerThread.isAlive()) {
+			stime = System.nanoTime();
 			runnerThread.start();
 		}
 	}
@@ -310,6 +312,7 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	 */
 	public void stop() throws IOException {
 		log("Stopping");
+		log("Download time: " + ((System.nanoTime()-stime)/1000000) + " ms");
 		fileTransfer.setDownloadingFlag(false);
 		scheduler.shutdown();
 		fileTransfer.saveState();

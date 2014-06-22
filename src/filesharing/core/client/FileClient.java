@@ -14,6 +14,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.time.StopWatch;
 
 import filesharing.core.connection.TrackerConnection;
 
@@ -154,7 +155,9 @@ public class FileClient implements Serializable {
 		// add file to list
 		addFile(filename, trackers);
 		// start download
+		long stime = System.nanoTime();
 		fileList.get(filename).loadMetadataFromPeers();
+		log("[FILE "+ filename +"] [DOWN] Time to Download the metadata: " + ((System.nanoTime()- stime)/1000000) + " ms");
 		fileList.get(filename).startDownload();
 	}
 	
