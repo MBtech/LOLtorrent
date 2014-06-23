@@ -29,7 +29,8 @@ public class P2PTest {
 		}
 		//Convert input arguments from string to integers
 		ptype = args[0];
-
+		File tmpdir = new File(new String("./tmp"));
+		tmpdir.mkdir();
 		if (ptype.compareTo("tracker")==0){
 			File dir = new File(new String("./tmp/t"));
 			dir.mkdir();
