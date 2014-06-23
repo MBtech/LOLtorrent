@@ -44,7 +44,7 @@ public class P2PTest {
 			dir.mkdir();
 			FileClient s = new FileClient("./tmp/c1", new String("S")); // XXX
 			s.setLogging(true);
-			s.addTracker("localhost", TrackerDaemon.DEFAULT_TRACKER_PORT);
+			s.addTracker("209.208.109.252", TrackerDaemon.DEFAULT_TRACKER_PORT);
 			s.seedFile("bigfile", FileTransfer.DEFAULT_BLOCK_SIZE); // XXX
 		}
 		else if (ptype.compareTo("leecher")==0){
@@ -60,7 +60,7 @@ public class P2PTest {
 			catch(IOException | NoMetadataException e){/*File not found*/}
 			
 			// add tracker
-			c1.addTracker("localhost", TrackerDaemon.DEFAULT_TRACKER_PORT);
+			c1.addTracker("209.208.109.252", TrackerDaemon.DEFAULT_TRACKER_PORT);
 
 			// try to download and then seed the file
 			while(true) {
