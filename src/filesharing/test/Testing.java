@@ -66,15 +66,12 @@ public class Testing {
 
 		// Delete old downloaded files to conduct new tests
 		Collection<File> files = FileUtils.listFilesAndDirs(new File("./tmp/"),new NotFileFilter(TrueFileFilter.INSTANCE),DirectoryFileFilter.INSTANCE);
-		System.out.println(files);
 		for (File f1: files){
-			System.out.println(f1.getPath());
 			if ((f1.getName().compareTo("tmp"))==0 || (f1.getName().compareTo("t"))==0 || (f1.getName().compareTo("c1"))==0){
-				//System.out.println("This Directory will be spared");
 				continue;
 			}
-			else{
-				//System.out.println("Deleting Directory");
+			else
+			{
 				FileUtils.deleteDirectory(f1);
 			}
 		}

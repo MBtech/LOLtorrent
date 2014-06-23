@@ -71,6 +71,7 @@ public class TrackerRequestHandler implements Runnable, TrackerRequestProcessor 
 		}
 		catch (IOException | ClassNotFoundException e) {
 			log("Invalid request from client: " + e.toString());
+			//e.printStackTrace();
 			// just exit silently
 		}
 	}
