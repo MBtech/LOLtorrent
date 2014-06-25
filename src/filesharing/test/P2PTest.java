@@ -27,7 +27,7 @@ public class P2PTest {
 		if(!f.exists())
 		{
 			Oos = new ObjectOutputStream(new FileOutputStream(f));
-			for (int i=0; i< fileSize*16384; i++)
+			for (int i=0; i<fileSize*16330; i++)
 			{
 				Oos.write("This is a test file and this is a test line to file up 64 bytes.".getBytes());
 			}
