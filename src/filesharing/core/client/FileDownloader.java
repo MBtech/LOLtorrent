@@ -142,8 +142,8 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 		//XXX Debug print: logging of piece arrival times
 		BitSet blocks = fileTransfer.getBlocksPresent();
 		long timeStamp = System.nanoTime();
-		long prevPieceDiff = (timeStamp-prevPieceTime)/1000;
-		long prevConsecDiff = (timeStamp-prevConsecTime)/1000;
+		long prevPieceDiff = (timeStamp-prevPieceTime)/1000000;
+		long prevConsecDiff = (timeStamp-prevConsecTime)/1000000;
 		System.out.println("Received piece " + index + " after " + prevPieceDiff + "ms");
 		if(blocks.nextClearBit(0) > consecutivePieces) {
 			consecutivePieces = blocks.nextClearBit(0) - 1;
