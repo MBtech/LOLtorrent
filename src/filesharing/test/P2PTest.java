@@ -50,7 +50,7 @@ public class P2PTest {
 		if (ptype.compareTo("tracker")!=0){
 			if (nargs<2)
 			{
-			System.out.println("Please provide Tracker IP");
+			System.out.println("Please provide Tracker IP to run seeder or leecher");
 			System.out.println("Usage: Program PeerType Tracker_IP[Optional] File_Size[Optional]");
 			return;
 			}
