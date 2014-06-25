@@ -3,7 +3,9 @@ package filesharing.core.client;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.text.SimpleDateFormat;
 import java.util.BitSet;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
@@ -138,6 +140,14 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 		if(fileTransfer.haveAllBlocks()) {
 			log("Download complete");
 			stop();
+		}
+		
+		//XXX Debug print: logging of piece arrival times
+		String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime());
+		BitSet blocks = fileTransfer.getBlocksPresent();
+		System.out.println(timeStamp + " Received piece " + index);
+		if(blocks.nextSetBit(0) > index) {
+			System.out.println(timeStamp + "Got up to piece " + blocks.nextSetBit(0));
 		}
 		
 	}
