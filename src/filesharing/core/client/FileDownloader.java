@@ -3,9 +3,7 @@ package filesharing.core.client;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.text.SimpleDateFormat;
 import java.util.BitSet;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
@@ -42,6 +40,11 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 	public static final int SAVE_STATE_DELAY = 1; // seconds
 	
 	private long stime = 0;
+	
+	// regarding piece stuff
+	private long prevPieceTime;
+	private long prevConsecTime;
+	private int consecutivePieces = 0;
 	
 	/**
 	 * Downloader thread
@@ -134,22 +137,27 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 		fileAccess.seek(fileTransfer.blockSize() * index);
 		fileAccess.write(block);
 		fileTransfer.getBlocksPresent().set(index);
-		this.dirtyState = true;
+		this.dirtyState = true;		
+		
+		//XXX Debug print: logging of piece arrival times
+		BitSet blocks = fileTransfer.getBlocksPresent();
+		long timeStamp = System.nanoTime();
+		long prevPieceDiff = (timeStamp-prevPieceTime)/1000;
+		long prevConsecDiff = (timeStamp-prevConsecTime)/1000;
+		System.out.println("Received piece " + index + " after " + prevPieceDiff + "µs");
+		if(blocks.nextClearBit(0) > consecutivePieces) {
+			consecutivePieces = blocks.nextClearBit(0) - 1;
+			System.out.println("Got " + consecutivePieces + " consecutive pieces after " + prevConsecDiff + "µs");
+			prevConsecTime = timeStamp;
+		}
+		prevPieceTime = timeStamp;
 		
 		// check if this is the last block
 		if(fileTransfer.haveAllBlocks()) {
 			log("Download complete");
 			stop();
 		}
-		
-		//XXX Debug print: logging of piece arrival times
-		String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime());
-		BitSet blocks = fileTransfer.getBlocksPresent();
-		System.out.println(timeStamp + " Received piece " + index);
-		if(blocks.nextSetBit(0) > index) {
-			System.out.println(timeStamp + "Got up to piece " + blocks.nextSetBit(0));
-		}
-		
+
 	}
 	
 	/**
@@ -245,6 +253,9 @@ public class FileDownloader implements Runnable, TrackerResponseProcessor {
 			log("could not fetch metadata for file " + filename);
 			throw new NoMetadataException("all the peers were mean to me: could not fetch metadata");
 		}
+		
+		//XXX: for debug prints regarding pieces received!
+		prevPieceTime = prevConsecTime = System.nanoTime();
 	}
 
 	/**

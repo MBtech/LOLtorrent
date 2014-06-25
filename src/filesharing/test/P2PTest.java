@@ -68,7 +68,6 @@ public class P2PTest {
 		if (ptype.compareTo("tracker")==0){
 			File dir = new File(new String("./tmp/t"));
 			dir.mkdir();
-			createFile("./tmp/t/bigfile_"+fileSize,fileSize);
 			// spawn a tracker with the specified tracker ID and working directory
 			TrackerDaemon t = new TrackerDaemon("./tmp/t", "T1"); // XXX
 			t.setLogging(true);
