@@ -96,6 +96,6 @@ public class GlobalConnectionMonitor implements Runnable {
 	 * @param msg message to be written
 	 */
 	public void log(String msg) {
-		System.out.println("[CONNECTION MONITOR] " + msg);
+		//System.out.println("[CONNECTION MONITOR] " + msg);
 	}
 }

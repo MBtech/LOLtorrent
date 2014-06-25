@@ -14,7 +14,6 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.lang3.time.StopWatch;
 
 import filesharing.core.connection.TrackerConnection;
 
